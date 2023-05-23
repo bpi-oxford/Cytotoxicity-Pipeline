@@ -39,14 +39,34 @@ The result Pandas table should looks like the following
 |  2 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 
 ## Environment Setup
-Python virtual environment is high recommended. For quick setup, we recommend to use [mambaforge](https://github.com/conda-forge/miniforge#miniforge3) as a replacement of anaconda. Replace the `mamba` command if you choose to stay with `conda`
+Python virtual environment is high recommended. For quick setup, we recommend to use [mambaforge](https://github.com/conda-forge/miniforge#miniforge3) as a replacement of anaconda. Replace the `mamba` command if you choose to stay with `conda`.
 
+Create virtual environment:
 ```bash
 mamba create -n cyto python=3.10 -y
 mamba activate cyto
 ```
+Install necessary packages
+
+```bash
+git clone
+cd 
+pip install requirements.txt
+```
+
+### Tensorflow/pyTroch Installation
+
+### CUDA Acceleration
+In some process we can accelerate the analysis process with CUDA GPU. To achieve so you need to install proper CUDA libraries:
+
+```bash
+mamba install
+```
 
 ## Usage
 
-### YAML Example
+```bash
+python cyto.py --pipeline <path-to-pipeline.yaml> -v
+```
 
+### YAML Example
