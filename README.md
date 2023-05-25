@@ -49,9 +49,9 @@ mamba activate cyto
 Install necessary packages
 
 ```bash
-git clone
-cd 
-pip install requirements.txt
+git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
+cd Cytotoxicity-Pipeline
+pip install -r requirements.txt
 ```
 
 ### Tensorflow/pyTroch Installation

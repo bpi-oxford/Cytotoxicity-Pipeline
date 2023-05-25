@@ -1,0 +1,19 @@
+description: Cytotoxicity batch run pipeline file
+channels: 
+  C1: TCell
+  C2: Brightfield
+  C3: DeadCell
+  C4: CancerCell
+microscope: UTSE
+
+pipeline:
+  preprocessing:
+    - name: module1
+      args:
+        option1: value1
+        option2: value2
+    - name: module2
+      args:
+        option1: value3
+        option2: value4
+
