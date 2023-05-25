@@ -1,10 +1,15 @@
 description: Cytotoxicity batch run pipeline file
-channels: 
-  C1: TCell
-  C2: Brightfield
-  C3: DeadCell
-  C4: CancerCell
 microscope: UTSE
+channels: 
+  TCell: null # path to the tiff files
+  Brightfield: null
+  DeadCell: null
+  CancerCell: null
+image_range:
+  # -1 refers to max range
+  x: [0,-1]
+  y: [0,-1]
+  t: [0,50]
 
 pipeline:
   preprocessing:
