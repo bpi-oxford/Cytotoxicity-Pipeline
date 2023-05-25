@@ -70,3 +70,4 @@ python cyto.py --pipeline <path-to-pipeline.yaml> -v
 ```
 
 ### YAML Example
+Check the pipeline YAML example in [./examples/pipeline.yaml](./examples/pipeline.yaml)
