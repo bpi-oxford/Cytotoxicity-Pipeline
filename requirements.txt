@@ -1,1 +1,4 @@
 dask
+distributed
+aicsimageio
+tqdm

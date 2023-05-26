@@ -5,13 +5,13 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
 
 ## Processing pipeline
 - File IO
-  - [ ] Multi-channel image handling pipeline
-  - [ ] Dask implementation 
+  - [x] Multi-channel image handling pipeline
+  - [x] Dask implementation 
 - Preprocessing
   - [ ] Decovolution
   - [ ] Denoising
   - [ ] Gamma correction
-  - [ ] Intensity normalization
+  - [x] Intensity normalization
   - [ ] Pixel size normalization
 - Segmentation
   Detection masks and cell centroids are expect to be in trackpy compatible format
@@ -29,6 +29,7 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [ ] Which cell(s) are interaction
   - [ ] Pandas/CSV export in trackpy format
   - [ ] Displacement, velocity
+  - [ ] Analysis plots
  
 The result Pandas table should looks like the following
 | Id | Track | x | y | z | t | alive | vel_x | vel_z | vel_y | contact_same | contact_diff | contact_same_id | contacting_diff_id |
@@ -36,7 +37,7 @@ The result Pandas table should looks like the following
 |  0 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 |  1 |   2   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 |  2 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
-|  2 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
+|  3 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 
 ## Environment Setup
 Python virtual environment is high recommended. For quick setup, we recommend to use [mambaforge](https://github.com/conda-forge/miniforge#miniforge3) as a replacement of anaconda. Replace the `mamba` command if you choose to stay with `conda`.
@@ -54,14 +55,18 @@ cd Cytotoxicity-Pipeline
 pip install -r requirements.txt
 ```
 
-### Tensorflow/pyTroch Installation
-
 ### CUDA Acceleration
 In some process we can accelerate the analysis process with CUDA GPU. To achieve so you need to install proper CUDA libraries:
 
+#### Dask CUDA
+[Dask CUDA](https://github.com/rapidsai/dask-cuda) provides various utilities to improve deployment and management of Dask workers on CUDA-enabled systems.
+
+We have to use install through mamba/conda instead of pip for better version control.
 ```bash
-mamba install
+mamba install -c rapidsai -c conda-forge -c nvidia dask-cuda cudatoolkit=11.8
 ```
+
+#### Tensorflow
 
 ## Usage
 
@@ -69,5 +74,16 @@ mamba install
 python cyto.py --pipeline <path-to-pipeline.yaml> -v
 ```
 
+During runtime a Dask daskboard is created. Usually you can access with the address: http://localhost:8787/status, but check if the port is matches output on the line:
+```log
+2023-05-26 18:19:55,929 - distributed.scheduler - INFO -   dashboard at:  http://129.67.90.167:8787/status
+```
+
 ### YAML Example
 Check the pipeline YAML example in [./examples/pipeline.yaml](./examples/pipeline.yaml)
+
+## Development Guide
+For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.md).
+
+## Authors
+Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)

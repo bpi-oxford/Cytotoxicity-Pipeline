@@ -1,24 +1,25 @@
 description: Cytotoxicity batch run pipeline file
-microscope: UTSE
+microscope: Confocal_2D+t
 channels: 
-  TCell: null # path to the tiff files
-  Brightfield: null
-  DeadCell: null
-  CancerCell: null
+  # path to the tiff files
+  TCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
+  Brightfield: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
+  DeadCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
+  CancerCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
 image_range:
-  # -1 refers to max range
-  x: [0,-1]
-  y: [0,-1]
-  t: [0,50]
+  # [start,stop,step], -1 refers to max range
+  x: [0,null,1]
+  y: [0,null,1]
+  t: [0,50,1]
+output_dir: ./output
 
 pipeline:
   preprocessing:
-    - name: module1
+    - name: PercentileNormalization
+      channels: all #effective channels, can be a list of channel names matching path input
       args:
-        option1: value1
-        option2: value2
-    - name: module2
-      args:
-        option1: value3
-        option2: value4
+        lp: 5
+        up: 95
+        verbose: True
+      output: True
 
