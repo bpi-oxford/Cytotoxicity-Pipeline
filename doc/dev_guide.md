@@ -6,8 +6,9 @@ Cytotoxicity pipeline is modular based CLI workflow. The workflow is designed as
 3. Tracking (label -> dataframe/ dataframe -> dataframe)
 4. Analysis (dataframe -> dataframe/ arbitrary outputs)
 
-For each workflow process it only accept specific type of input-output pair. For module reusability the data is interfaced as a python dictionary object, e.g. in preprocessing we provide a dict input with keyword "image". Then return file is in the same format.
+For each workflow process it only accept specific type of input-output pair. To enhance module reusability the data is interfaced as a python dictionary object, e.g. in preprocessing we provide a dict input with keyword "image". Then return file is in the same format.
 
+For individual steps check the table for input-output dictionary key-pairs:
 
 | Step          | Input Key           | Output Key  |
 |---------------|---------------------|-------------|
@@ -54,9 +55,7 @@ A full example of the class can be found in [../preprocessing/normalization.py](
 
 ⚠️ Add notes to [README.md](../README.md) when necessary, particularly conda/mamba specific dependencies⚠️
 
-To load the class back to the main function you only need to add corresponding header import.
-
-
+To load the class back to the main function you only need to add corresponding header import and edit the pipeline YAML file.
 
 ## Custom Intermediate Output
 TODO
