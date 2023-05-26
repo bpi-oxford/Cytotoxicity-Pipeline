@@ -61,7 +61,7 @@ In some process we can accelerate the analysis process with CUDA GPU. To achieve
 #### Dask CUDA
 [Dask CUDA](https://github.com/rapidsai/dask-cuda) provides various utilities to improve deployment and management of Dask workers on CUDA-enabled systems.
 
-We have to use install through mamba/conda instead of pip for better version control.
+We have to install through mamba/conda instead of pip for better version control.
 ```bash
 mamba install -c rapidsai -c conda-forge -c nvidia dask-cuda cudatoolkit=11.8
 ```
