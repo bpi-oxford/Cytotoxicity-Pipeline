@@ -3,6 +3,7 @@
 Cytotoxicity pipeline is modular based CLI workflow. The workflow is designed as:
 1. Preprocessing (image -> image)
 2. Segmentation (image -> label / label -> label)
+3. Detection (image -> dataframe/ label -> dataframe)
 3. Tracking (label -> dataframe/ dataframe -> dataframe)
 4. Analysis (dataframe -> dataframe/ arbitrary outputs)
 
@@ -10,12 +11,13 @@ For each workflow process it only accept specific type of input-output pair. To 
 
 For individual steps check the table for input-output dictionary key-pairs:
 
-| Step          | Input Key           | Output Key  |
-|---------------|---------------------|-------------|
-| Preprocessing | "image"             | "image"     |
-| Segmentation  | "image"/"label"     | "label"     |
-| Tracking      | "label"/"dataframe" | "dataframe" |
-| Analysis      | "dataframe"         | arbitary    |
+| Step          | Input Key           | Output Key          |
+|---------------|---------------------|---------------------|
+| Preprocessing | "image"             | "image"             |
+| Segmentation  | "image"/"label"     | "label"             |
+| Detection     | "image"/"label"     | "dataframe"         |
+| Tracking      | "dataframe"         | "dataframe"         |
+| Analysis      | "dataframe"         | arbitrary           |
 
 For short, following the template class for the modular workflow:
 

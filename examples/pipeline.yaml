@@ -7,7 +7,7 @@ channels:
   DeadCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
   CancerCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
 image_range:
-  # [start,stop,step], -1 refers to max range
+  # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
   y: [0,null,1]
   t: [0,50,1]
@@ -22,4 +22,11 @@ pipeline:
         up: 95
         verbose: True
       output: True
-
+  segmentation:
+    - name: StarDist
+      channels: [TCell,DeadCell,CancerCell]
+      input_type: "image" # allows image/label input type
+      args: 
+        model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
+      output_type: "label" # only allow label type for segmentation process
+      output: True

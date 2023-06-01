@@ -6,6 +6,7 @@ from aicsimageio import AICSImage
 from aicsimageio.writers import OmeTiffWriter
 from dask_init import *
 from preprocessing.normalization import *
+from segmentation.stardist import *
 
 def get_args():
 	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
@@ -62,7 +63,7 @@ def main(args):
 		class_name = p['name']
 		class_args = p["args"]
 				
-		# # Dynamically instantiate the class
+		# Dynamically instantiate the class
 		class_obj = globals()[p["name"]](**class_args)
 		if p["channels"] == "all":
 			channels = pipeline["channels"].keys()
@@ -80,9 +81,36 @@ def main(args):
 				output_file = os.path.join(output_dir,"{}.tif".format(ch))
 				os.makedirs(output_dir,exist_ok=True)
 				tqdm.write("Exporting result: {}".format(output_file))
-				OmeTiffWriter.save(images[ch], output_file, dim_order="TYX")
+				OmeTiffWriter.save(images[ch].T, output_file, dim_order="TYX")
 
 	# segmentation
+	labels = {}
+	for p in pipeline["pipeline"]["segmentation"]:
+		class_name = p["name"]
+		class_args = p["args"]
+
+		input_type = p["input_type"] # image, label
+		output_type = p["output_type"] # label
+
+		# Dynamically instantiate the class
+		class_obj = globals()[p["name"]](**class_args)
+		if p["channels"] == "all":
+			channels = pipeline["channels"].keys()
+		else:
+			channels = p["channels"]
+
+		for ch in channels:
+			# inplace update
+			res = class_obj({input_type: images[ch]})
+			labels[ch] = res["label"]
+
+			# export to ome tiff format
+			if p["output"]:
+				output_dir = os.path.join(pipeline["output_dir"],"segmentation",class_name)
+				output_file = os.path.join(output_dir,"{}.tif".format(ch))
+				os.makedirs(output_dir,exist_ok=True)
+				tqdm.write("Exporting result: {}".format(output_file))
+				OmeTiffWriter.save(labels[ch].T, output_file, dim_order="TYX")
 
 if __name__ == "__main__":
 	args = get_args()

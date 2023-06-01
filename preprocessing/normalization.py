@@ -21,6 +21,7 @@ class PercentileNormalization(object):
 
     def __call__(self, data) -> Any:
         image = data["image"]
+        img_type = image.dtype
 
         if self.verbose:
             tqdm.write("Percentile normalization: [{},{}]".format(self.lp,self.up))
@@ -34,4 +35,4 @@ class PercentileNormalization(object):
             out_range=(0,np.iinfo(image.dtype).max)
         )
 
-        return {"image": image}
+        return {"image": image.astype(img_type)}

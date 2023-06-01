@@ -9,15 +9,23 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [x] Dask implementation 
 - Preprocessing
   - [ ] Decovolution
+  - [ ] Flat field correction
   - [ ] Denoising
   - [ ] Gamma correction
   - [x] Intensity normalization
   - [ ] Pixel size normalization
+  - [ ] Channel merge
 - Segmentation
+  
   Detection masks and cell centroids are expect to be in trackpy compatible format
+  - [ ] Simple thresholding
+  - [ ] Otsu thresholding
   - [ ] StarDist
   - [ ] Cellpose
+  - [ ] Morphological operations
+  - [ ] Connected components 
 - Tracking
+  - [ ] Feature measurements
   - [ ] trackpy
   - [ ] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
   - [ ] btrack
@@ -47,16 +55,9 @@ Create virtual environment:
 mamba create -n cyto python=3.10 -y
 mamba activate cyto
 ```
-Install necessary packages
-
-```bash
-git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
-cd Cytotoxicity-Pipeline
-pip install -r requirements.txt
-```
 
 ### CUDA Acceleration
-In some process we can accelerate the analysis process with CUDA GPU. To achieve so you need to install proper CUDA libraries:
+In some process we can accelerate the analysis process with CUDA GPU. To achieve CUDA version compatibility **Tensorflow 2.12.0** and **pyTorch 2.0.1** must be used together with **CUDA 11.8**. 
 
 #### Dask CUDA
 [Dask CUDA](https://github.com/rapidsai/dask-cuda) provides various utilities to improve deployment and management of Dask workers on CUDA-enabled systems.
@@ -67,6 +68,18 @@ mamba install -c rapidsai -c conda-forge -c nvidia dask-cuda cudatoolkit=11.8
 ```
 
 #### Tensorflow
+For Stardist segmentation we recommend to use TF2 verison. Follow the instruction for [TF 2.12 installation](https://www.tensorflow.org/install/pip).
+
+#### pyTorch
+For Cellpose segmentation we recommend to use pyTorch 2.0.. Follow the instruction for [pyTorch installation](https://pytorch.org/get-started/locally/).
+
+### Required Packages
+
+```bash
+git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
+cd Cytotoxicity-Pipeline
+pip install -r requirements.txt
+```
 
 ## Usage
 
