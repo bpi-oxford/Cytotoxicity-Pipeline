@@ -72,6 +72,7 @@ def main(args):
 
 		for ch in channels:
 			# inplace update
+			tqdm.write("Channel: {}".format(ch))
 			res = class_obj({"image": images[ch]})
 			images[ch] = res["image"]
 
@@ -101,6 +102,7 @@ def main(args):
 
 		for ch in channels:
 			# inplace update
+			tqdm.write("Channel: {}".format(ch))
 			res = class_obj({input_type: images[ch]})
 			labels[ch] = res["label"]
 
