@@ -103,7 +103,11 @@ def main(args):
 		for ch in channels:
 			# inplace update
 			tqdm.write("Channel: {}".format(ch))
-			res = class_obj({input_type: images[ch]})
+			if input_type == "image":
+				input = images
+			elif input_type == "label":
+				input = labels
+			res = class_obj({input_type: input[ch]})
 			labels[ch] = res["label"]
 
 			# export to ome tiff format

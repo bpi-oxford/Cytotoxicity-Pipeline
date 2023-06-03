@@ -10,7 +10,7 @@ image_range:
   # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
   y: [0,null,1]
-  t: [0,50,1]
+  t: [0,3,1]
 output_dir: ./output
 
 pipeline:
@@ -28,5 +28,7 @@ pipeline:
       input_type: "image" # allows image/label input type
       args: 
         model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
+        prob_thresh: 0.3
+        nms_thresh: 0.8
       output_type: "label" # only allow label type for segmentation process
       output: True

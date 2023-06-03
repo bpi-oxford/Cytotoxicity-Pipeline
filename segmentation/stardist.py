@@ -3,19 +3,25 @@ from typing import Any
 from tqdm import tqdm
 import dask.array as da
 import tensorflow as tf
+import numpy as np
+from csbdeep.utils import normalize
 
 class StarDist(object):
-    def __init__(self,model_name="2D_versatile_fluo", verbose=True) -> None:
+    def __init__(self,model_name="2D_versatile_fluo", prob_thresh=0.479071, nms_thresh=0.3, verbose=True) -> None:
         """
         Perform StarDist segmentation model
 
         Args:
             model_name (str): Registered models for StarDist2D
+            prob_thresh (float): Probability threshold between 0 and 1
+            nms_thresh (float): Non-maximum suppression threshold between 0 and 1
             verbose (bool): Turn on or off the processing printout
         """
         self.name = "StarDist"
         self.model_name = model_name
         self.verbose = verbose
+        self.prob_thresh = prob_thresh
+        self.nms_thresh = nms_thresh
 
     def __call__(self, data) -> Any:
         image = data["image"]
@@ -33,8 +39,11 @@ class StarDist(object):
             tqdm.write("StarDist Segmentation 2D: {}".format(self.model_name))
 
         # perform stardist segmentation
-        label = da.zeros_like(image)
+        label = np.zeros_like(image)
         for t in tqdm(range(image.shape[2])):
-            label[:,:,t], _ = model.predict_instances(image[:,:,t])
+            img = image[:,:,t]
+            img = normalize(img,0,100,axis=(0,1)) # convert from range [0,max] to [0,1]
+            label_, _ = model.predict_instances(img,prob_thresh=self.prob_thresh,nms_thresh=self.nms_thresh)
+            label[:,:,t] = label_
 
         return {"image": image, "label": label}
