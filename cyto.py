@@ -7,6 +7,8 @@ from aicsimageio.writers import OmeTiffWriter
 from dask_init import *
 from preprocessing.normalization import *
 from segmentation.stardist import *
+from utils.label_to_table import *
+from utils.utils import *
 
 def get_args():
 	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
@@ -32,6 +34,73 @@ def get_args():
 			print("{} = {}".format(str(key), str(args_dict[key])))
 
 	return args
+
+def preprocessing(images, pipeline):
+	for p in pipeline['pipeline']["preprocessing"]:
+		class_name = p['name']
+		class_args = p["args"]
+				
+		# Dynamically instantiate the class
+		class_obj = globals()[p["name"]](**class_args)
+		if p["channels"] == "all":
+			channels = pipeline["channels"].keys()
+		else:
+			channels = p["channels"]
+
+		for ch in channels:
+			# inplace update
+			tqdm.write("Channel: {}".format(ch))
+			res = class_obj({"image": images[ch]})
+			images[ch] = res["image"]
+
+			# export to ome tiff format
+			if p["output"]:
+				output_dir = os.path.join(pipeline["output_dir"],"preprocessing",class_name)
+				output_file = os.path.join(output_dir,"{}.tif".format(ch))
+				os.makedirs(output_dir,exist_ok=True)
+				tqdm.write("Exporting result: {}".format(output_file))
+				OmeTiffWriter.save(images[ch].T, output_file, dim_order="TYX")
+
+	return images
+
+def segmentation(images, pipeline):
+	labels = {}
+	for p in pipeline["pipeline"]["segmentation"]:
+		class_name = p["name"]
+		class_args = p["args"]
+
+		input_type = p["input_type"] # image, label
+		output_type = p["output_type"] # label
+
+		# Dynamically instantiate the class
+		if class_args:
+			class_obj = globals()[p["name"]](**class_args)
+		else:
+			class_obj = globals()[p["name"]]()
+		if p["channels"] == "all":
+			channels = pipeline["channels"].keys()
+		else:
+			channels = p["channels"]
+
+		for ch in channels:
+			# inplace update
+			tqdm.write("Channel: {}".format(ch))
+			if input_type == "image":
+				input = images
+			elif input_type == "label":
+				input = labels
+			res = class_obj({input_type: input[ch]})
+			labels[ch] = res["label"]
+
+			# export to ome tiff format
+			if p["output"]:
+				output_dir = os.path.join(pipeline["output_dir"],"segmentation",class_name)
+				output_file = os.path.join(output_dir,"{}.tif".format(ch))
+				os.makedirs(output_dir,exist_ok=True)
+				tqdm.write("Exporting result: {}".format(output_file))
+				OmeTiffWriter.save(labels[ch].T, output_file, dim_order="TYX")
+
+	return images, labels
 
 def main(args):
 	pipeline_file = args.pipeline
@@ -59,64 +128,25 @@ def main(args):
 	os.makedirs(pipeline["output_dir"],exist_ok=True)
 
 	# preprocessing
-	for p in pipeline['pipeline']["preprocessing"]:
-		class_name = p['name']
-		class_args = p["args"]
-				
-		# Dynamically instantiate the class
-		class_obj = globals()[p["name"]](**class_args)
-		if p["channels"] == "all":
-			channels = pipeline["channels"].keys()
-		else:
-			channels = p["channels"]
-
-		for ch in channels:
-			# inplace update
-			tqdm.write("Channel: {}".format(ch))
-			res = class_obj({"image": images[ch]})
-			images[ch] = res["image"]
-
-			# export to ome tiff format
-			if p["output"]:
-				output_dir = os.path.join(pipeline["output_dir"],"preprocessing",class_name)
-				output_file = os.path.join(output_dir,"{}.tif".format(ch))
-				os.makedirs(output_dir,exist_ok=True)
-				tqdm.write("Exporting result: {}".format(output_file))
-				OmeTiffWriter.save(images[ch].T, output_file, dim_order="TYX")
+	if pipeline["pipeline"]["preprocessing"]:
+		images = preprocessing(images,pipeline)
 
 	# segmentation
-	labels = {}
-	for p in pipeline["pipeline"]["segmentation"]:
-		class_name = p["name"]
-		class_args = p["args"]
+	if pipeline["pipeline"]["segmentation"]:
+		images, labels = segmentation(images,pipeline)
 
-		input_type = p["input_type"] # image, label
-		output_type = p["output_type"] # label
+	# convert segmentation mask to trackpy style array
+	# https://github.com/bpi-oxford/Cytotoxicity-Analysis/blob/main/graph_tracking.ipynb
+	features = label_to_sparse(labels=labels,images=images,spacing=pipeline["spacing"])
+	for ch, label in labels.items():
+		tqdm.write("Channel: {}".format(ch))
+		output_dir = os.path.join(pipeline["output_dir"],"tracking")
+		output_file = os.path.join(output_dir,"{}.csv".format(ch))
+		os.makedirs(output_dir,exist_ok=True)
+		tqdm.write("Exporting result: {}".format(output_file))
+		features[ch].to_csv(output_file,index=False)
 
-		# Dynamically instantiate the class
-		class_obj = globals()[p["name"]](**class_args)
-		if p["channels"] == "all":
-			channels = pipeline["channels"].keys()
-		else:
-			channels = p["channels"]
-
-		for ch in channels:
-			# inplace update
-			tqdm.write("Channel: {}".format(ch))
-			if input_type == "image":
-				input = images
-			elif input_type == "label":
-				input = labels
-			res = class_obj({input_type: input[ch]})
-			labels[ch] = res["label"]
-
-			# export to ome tiff format
-			if p["output"]:
-				output_dir = os.path.join(pipeline["output_dir"],"segmentation",class_name)
-				output_file = os.path.join(output_dir,"{}.tif".format(ch))
-				os.makedirs(output_dir,exist_ok=True)
-				tqdm.write("Exporting result: {}".format(output_file))
-				OmeTiffWriter.save(labels[ch].T, output_file, dim_order="TYX")
+	# tracking
 
 if __name__ == "__main__":
 	args = get_args()

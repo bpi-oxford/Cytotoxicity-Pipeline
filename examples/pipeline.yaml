@@ -2,33 +2,50 @@ description: Cytotoxicity batch run pipeline file
 microscope: Confocal_2D+t
 channels: 
   # path to the tiff files
-  TCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
-  Brightfield: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
-  DeadCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
-  CancerCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
+  # TCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
+  # Brightfield: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
+  # CancerCellDead: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
+  # CancerCellAlive: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
+
+  TCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/TCell.tif
+  CancerCellDead: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/DeadCell.tif
+  CancerCellAlive: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif
 image_range:
   # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
   y: [0,null,1]
   t: [0,3,1]
 output_dir: ./output
+spacing: [0.8286426,0.8286426] # um
 
 pipeline:
   preprocessing:
-    - name: PercentileNormalization
-      channels: all #effective channels, can be a list of channel names matching path input
+    # - name: PercentileNormalization
+    #   channels: all #effective channels, can be a list of channel names matching path input
+    #   args:
+    #     lp: 5
+    #     up: 95
+    #     verbose: True
+    #   output: True
+    - name: ChannelMerge
+      channels: [CancerCellDead, CancerCellAlive]
       args:
-        lp: 5
-        up: 95
+        output_channel_name: CancerCell
         verbose: True
       output: True
   segmentation:
-    - name: StarDist
-      channels: [TCell,DeadCell,CancerCell]
-      input_type: "image" # allows image/label input type
-      args: 
-        model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
-        prob_thresh: 0.3
-        nms_thresh: 0.8
+    # - name: StarDist
+    #   channels: [TCell,DeadCell,CancerCell]
+    #   input_type: "image" # allows image/label input type
+    #   args: 
+    #     model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
+    #     prob_thresh: 0.3
+    #     nms_thresh: 0.8
+    #   output_type: "label" # only allow label type for segmentation process
+    #   output: True
+    - name: ImageToLabel
+      channels: all
+      input_type: "image"
+      args: null
       output_type: "label" # only allow label type for segmentation process
-      output: True
+      output: False
