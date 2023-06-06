@@ -14,18 +14,18 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [ ] Gamma correction
   - [x] Intensity normalization
   - [ ] Pixel size normalization
-  - [ ] Channel merge
+  - [x] Channel merge
 - Segmentation
   
   Detection masks and cell centroids are expect to be in trackpy compatible format
   - [ ] Simple thresholding
   - [ ] Otsu thresholding
-  - [ ] StarDist
+  - [x] StarDist
   - [ ] Cellpose
   - [ ] Morphological operations
-  - [ ] Connected components 
+  - [x] Connected components 
 - Tracking
-  - [ ] Feature measurements
+  - [x] Feature measurements
   - [ ] trackpy
   - [ ] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
   - [ ] btrack

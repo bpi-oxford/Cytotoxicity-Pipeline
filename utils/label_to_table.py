@@ -119,7 +119,7 @@ def label_to_sparse(labels, images=None, spacing=[1,1]):
                 image_ = label[:,:,frame]
             label_ = label[:,:,frame]
 
-            # dask array need to computer before apply async
+            # dask array need to compute before apply async
             image_ = image_.compute()
             label_ = label_.compute()
             pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": k, "spacing": spacing}, callback=collect_result)

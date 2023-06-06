@@ -42,8 +42,9 @@ class StarDist(object):
         label = np.zeros_like(image)
         for t in tqdm(range(image.shape[2])):
             img = image[:,:,t]
-            img = normalize(img,0,100,axis=(0,1)) # convert from range [0,max] to [0,1]
+            img = normalize(img.compute(),pmin=0,pmax=100,axis=(0,1)) # convert from range [0,max] to [0,1]
             label_, _ = model.predict_instances(img,prob_thresh=self.prob_thresh,nms_thresh=self.nms_thresh)
             label[:,:,t] = label_
-
+        label = label.astype(np.uint16)
+        
         return {"image": image, "label": label}

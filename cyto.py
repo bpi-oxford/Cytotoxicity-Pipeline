@@ -48,18 +48,31 @@ def preprocessing(images, pipeline):
 			channels = p["channels"]
 
 		for ch in channels:
-			# inplace update
-			tqdm.write("Channel: {}".format(ch))
-			res = class_obj({"image": images[ch]})
-			images[ch] = res["image"]
+			if isinstance(ch, str):
+				# inplace update
+				tqdm.write("Channel: {}".format(ch))
+				res = class_obj({"image": images[ch]})
+				images[ch] = res["image"]
+			elif isinstance(ch, list):
+				# multiple input
+				tqdm.write("Multi channel input: [{}]".format(', '.join([str(ch_) for ch_ in ch])))
+				images_ = [images[ch_] for ch_ in ch]
+				res = class_obj({"images": images_}) # beware of the difference btw "image" and "images" keys
+				images[p["output_channel_name"]] = res["output"]
 
 			# export to ome tiff format
 			if p["output"]:
 				output_dir = os.path.join(pipeline["output_dir"],"preprocessing",class_name)
-				output_file = os.path.join(output_dir,"{}.tif".format(ch))
-				os.makedirs(output_dir,exist_ok=True)
-				tqdm.write("Exporting result: {}".format(output_file))
-				OmeTiffWriter.save(images[ch].T, output_file, dim_order="TYX")
+				if isinstance(ch, str):
+					output_file = os.path.join(output_dir,"{}.tif".format(ch))
+					os.makedirs(output_dir,exist_ok=True)
+					tqdm.write("Exporting result: {}".format(output_file))
+					OmeTiffWriter.save(images[ch].T, output_file, dim_order="TYX")
+				elif isinstance(ch, list):
+					output_file = os.path.join(output_dir,"{}.tif".format(p["output_channel_name"]))
+					os.makedirs(output_dir,exist_ok=True)
+					tqdm.write("Exporting result: {}".format(output_file))
+					OmeTiffWriter.save(images[p["output_channel_name"]].T, output_file, dim_order="TYX")
 
 	return images
 
