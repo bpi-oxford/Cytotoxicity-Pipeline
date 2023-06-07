@@ -4,6 +4,7 @@ from tqdm import tqdm
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
+import dask.array as da
 
 def extract_segment_features(image,label,frame,relabel=False,offset=0,cell_type="",spacing=[1,1]):
     image = sitk.GetImageFromArray(image)
@@ -67,7 +68,7 @@ def merge_dicts(x,y):
     z.update(y)
     return z
 
-def label_to_sparse(labels, images=None, spacing=[1,1]):
+def label_to_sparse(label, image=None, spacing=[1,1],celltype=""):
     # extracting the segment centroids
     columns = [
         "label",
@@ -98,46 +99,42 @@ def label_to_sparse(labels, images=None, spacing=[1,1]):
         "alive"
         ]
 
-    features = {}
+    pool = Pool(processes=multiprocessing.cpu_count())
+    pbar = tqdm(total=label.shape[2])
 
-    for k, label in labels.items():
-        tqdm.write("Prepare image feature extraction from cell data: {}".format(k))
+    results = {}
+    def collect_result(result):
+        f = pd.DataFrame.from_dict(result[1],orient='index',columns=columns).sort_values(by=["label"])
+        results[result[0]] = {"data": f, "offset": result[2]}
+        pbar.update(1) # this is just for the fancy progress bar
 
-        pool = Pool(processes=multiprocessing.cpu_count())
-        pbar = tqdm(total=label.shape[2])
+    for frame in range(label.shape[2]):
+        if image is not None:
+            image_ = image[:,:,frame]
+        else:
+            image_ = label[:,:,frame]
+        label_ = label[:,:,frame]
 
-        results = {}
-        def collect_result(result):
-            f = pd.DataFrame.from_dict(result[1],orient='index',columns=columns).sort_values(by=["label"])
-            results[result[0]] = {"data": f, "offset": result[2]}
-            pbar.update(1) # this is just for the fancy progress bar
-
-        for frame in range(label.shape[2]):
-            if images:
-                image_ = images[k][:,:,frame]
-            else:
-                image_ = label[:,:,frame]
-            label_ = label[:,:,frame]
-
-            # dask array need to compute before apply async
+        # dask array need to compute before apply async
+        if isinstance(image_, da.Array):
             image_ = image_.compute()
+        if isinstance(label_,da.Array):
             label_ = label_.compute()
-            pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": k, "spacing": spacing}, callback=collect_result)
-        pool.close()
-        pool.join()
+        pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": celltype, "spacing": spacing}, callback=collect_result)
+    pool.close()
+    pool.join()
 
-        # collect data to dictionary form
-        # tqdm.write("Applying label number offset")
-        data = pd.DataFrame(columns=columns)
-        offset = 0
-        data = []
-        for key in tqdm(sorted(results)):
-            data_ = results[key]["data"]
-            data_["label"] = data_['label'].apply(lambda x: x + offset)
-            # data = merge_dicts(data,data_)
-            data.append(data_)
-            offset += results[key]["offset"]
+    # collect data to dictionary form
+    # tqdm.write("Applying label number offset")
+    data = pd.DataFrame(columns=columns)
+    offset = 0
+    data = []
+    for key in tqdm(sorted(results)):
+        data_ = results[key]["data"]
+        data_["label"] = data_['label'].apply(lambda x: x + offset)
+        # data = merge_dicts(data,data_)
+        data.append(data_)
+        offset += results[key]["offset"]
 
-        data = pd.concat(data,ignore_index=True)
-        features[k] = data
-    return features
+    data = pd.concat(data,ignore_index=True)
+    return data

@@ -43,7 +43,7 @@ def preprocessing(images, pipeline):
 		# Dynamically instantiate the class
 		class_obj = globals()[p["name"]](**class_args)
 		if p["channels"] == "all":
-			channels = pipeline["channels"].keys()
+			channels = images.keys()
 		else:
 			channels = p["channels"]
 
@@ -91,7 +91,7 @@ def segmentation(images, pipeline):
 		else:
 			class_obj = globals()[p["name"]]()
 		if p["channels"] == "all":
-			channels = pipeline["channels"].keys()
+			channels = images.keys()
 		else:
 			channels = p["channels"]
 
@@ -149,15 +149,20 @@ def main(args):
 		images, labels = segmentation(images,pipeline)
 
 	# convert segmentation mask to trackpy style array
-	# https://github.com/bpi-oxford/Cytotoxicity-Analysis/blob/main/graph_tracking.ipynb
-	features = label_to_sparse(labels=labels,images=images,spacing=pipeline["spacing"])
-	for ch, label in labels.items():
-		tqdm.write("Channel: {}".format(ch))
+	features = {}
+
+	for image_ch, label_ch in pipeline["pipeline"]["label_to_sparse"]["image_label_pair"]:
+		tqdm.write("Converting segmentation mask to sparse table...")
+		tqdm.write("Image Channel: {}".format(image_ch))
+		tqdm.write("Label Channel: {}".format(label_ch))
+
+		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=pipeline["spacing"],celltype=image_ch)
+
 		output_dir = os.path.join(pipeline["output_dir"],"tracking")
-		output_file = os.path.join(output_dir,"{}.csv".format(ch))
+		output_file = os.path.join(output_dir,"{}.csv".format(image_ch))
 		os.makedirs(output_dir,exist_ok=True)
 		tqdm.write("Exporting result: {}".format(output_file))
-		features[ch].to_csv(output_file,index=False)
+		features[image_ch].to_csv(output_file,index=False)
 
 	# tracking
 

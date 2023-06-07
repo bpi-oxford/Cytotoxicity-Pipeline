@@ -20,18 +20,18 @@ spacing: [0.8286426,0.8286426] # um
 
 pipeline:
   preprocessing:
-    # - name: PercentileNormalization
-    #   channels: all #effective channels, can be a list of channel names matching path input
-    #   args:
-    #     lp: 5
-    #     up: 95
-    #     verbose: True
-    #   output: True
     - name: ChannelMerge # multiple channel input and new output channel
       channels: [[Dead, Alive]]
       args:
         verbose: True
       output_channel_name: CancerCell
+      output: True
+    - name: PercentileNormalization
+      channels: all #effective channels, can be a list of channel names matching path input
+      args:
+        lp: 5
+        up: 95
+        verbose: True
       output: True
   segmentation:
     - name: StarDist
@@ -49,3 +49,16 @@ pipeline:
     #   args: null
     #   output_type: "label" # only allow label type for segmentation process
     #   output: False
+  label_to_sparse:
+    image_label_pair: [
+        [TCell,TCell],
+        [Dead,CancerCell],
+        [Alive,CancerCell]
+      ]
+    output: True
+  tracking:
+    - name: trackpy
+      channels: all
+      args:
+        verbose: True
+      output: True
