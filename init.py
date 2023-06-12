@@ -3,6 +3,9 @@ from dask_cuda.worker_spec import *
 from dask.distributed import Client, Scheduler, Worker, Nanny, SpecCluster
 import multiprocessing
 import psutil
+import os
+import imagej
+import imagej.doctor
 
 def init_dask_cluster(cpu_scale=3, gpu_scale=1):
     print("Initializing Dask cluster...")
@@ -60,3 +63,13 @@ def init_dask_cluster(cpu_scale=3, gpu_scale=1):
     client = Client(cluster)
     
     return client
+
+def pyimagej_init(FIJI_DIR=""):
+    imagej.doctor.checkup()
+
+    if not os.path.exists(FIJI_DIR) or FIJI_DIR == "":
+        raise Exception("Fiji.app directory not found")
+
+    print("Initializing Fiji on JVM...")
+    ij = imagej.init(FIJI_DIR,mode='headless')
+    print(ij.getApp().getInfo(True))

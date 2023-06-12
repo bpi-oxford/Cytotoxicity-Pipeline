@@ -55,7 +55,7 @@ A full example of the class can be found in [../preprocessing/normalization.py](
 
 ⚠️ **Important**: Add your package dependency to [requirements.txt](../requirements.txt) ⚠️
 
-⚠️ Add notes to [README.md](../README.md) when necessary, particularly conda/mamba specific dependencies⚠️
+⚠️ Add notes to [README.md](../README.md) and/or [./doc/setup.md](./setup.md) when necessary, particularly conda/mamba specific dependencies⚠️
 
 To load the class back to the main function you only need to add corresponding header import and edit the pipeline YAML file.
 

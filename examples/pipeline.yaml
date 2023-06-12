@@ -1,5 +1,6 @@
 description: Cytotoxicity batch run pipeline file
 microscope: Confocal_2D+t
+fiji_dir: /home/jackyko/Jacky/Software/Fiji.app
 channels: 
   # path to the tiff files
   TCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
@@ -10,6 +11,7 @@ channels:
   # TCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/TCell.tif
   # Dead: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/DeadCell.tif
   # Alive: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif
+  # CancerCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif
 image_range:
   # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
@@ -43,12 +45,12 @@ pipeline:
         nms_thresh: 0.8
       output_type: "label" # only allow label type for segmentation process
       output: True
-    # - name: ImageToLabel
-    #   channels: all
-    #   input_type: "image"
-    #   args: null
-    #   output_type: "label" # only allow label type for segmentation process
-    #   output: False
+    - name: ImageToLabel
+      channels: all
+      input_type: "image"
+      args: null
+      output_type: "label" # only allow label type for segmentation process
+      output: False
   label_to_sparse:
     image_label_pair: [
         [TCell,TCell],
@@ -57,8 +59,8 @@ pipeline:
       ]
     output: True
   tracking:
-    - name: trackpy
-      channels: all
+    - name: TrackMate
+      channels: [TCell, Dead, Alive]
       args:
         verbose: True
       output: True

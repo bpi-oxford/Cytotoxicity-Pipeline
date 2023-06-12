@@ -48,37 +48,15 @@ The result Pandas table should looks like the following
 |  3 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 
 ## Environment Setup
-Python virtual environment is high recommended. For quick setup, we recommend to use [mambaforge](https://github.com/conda-forge/miniforge#miniforge3) as a replacement of anaconda. Replace the `mamba` command if you choose to stay with `conda`.
 
-Create virtual environment:
+### Native Python Runtime
+Check [./doc/setup.md](./doc/setup.md) for the setup instruction.
+
+### Docker Runtime
+For quick environment setup use the docker image:
 ```bash
-mamba create -n cyto python=3.10 -y
-mamba activate cyto
-```
-
-### CUDA Acceleration
-In some process we can accelerate the analysis process with CUDA GPU. To achieve CUDA version compatibility **Tensorflow 2.12.0** and **pyTorch 2.0.1** must be used together with **CUDA 11.8**. 
-
-#### Dask CUDA
-[Dask CUDA](https://github.com/rapidsai/dask-cuda) provides various utilities to improve deployment and management of Dask workers on CUDA-enabled systems.
-
-We have to install through mamba/conda instead of pip for better version control.
-```bash
-mamba install -c rapidsai -c conda-forge -c nvidia dask-cuda cudatoolkit=11.8
-```
-
-#### Tensorflow
-For Stardist segmentation we recommend to use TF2 verison. Follow the instruction for [TF 2.12 installation](https://www.tensorflow.org/install/pip).
-
-#### pyTorch
-For Cellpose segmentation we recommend to use pyTorch 2.0.. Follow the instruction for [pyTorch installation](https://pytorch.org/get-started/locally/).
-
-### Required Packages
-
-```bash
-git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
-cd Cytotoxicity-Pipeline
-pip install -r requirements.txt
+docker build --pull --rm -f "Dockerfile" -t cytotoxicity-pipeline:latest "."
+docker run --gpus all --rm -it -p 8787:8787/tcp cytotoxicity-pipeline:latest bash
 ```
 
 ## Usage

@@ -4,9 +4,10 @@ import argparse
 import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers import OmeTiffWriter
-from dask_init import *
+from init import *
 from preprocessing.normalization import *
 from segmentation.stardist import *
+from tracking.trackmate import *
 from utils.label_to_table import *
 from utils.utils import *
 
@@ -123,6 +124,9 @@ def main(args):
 
 	# initiate dask cluster
 	client = init_dask_cluster()
+
+	# initiate fiji
+	pyimagej_init(FIJI_DIR=pipeline["fiji_dir"])
 	
 	# data loading
 	images = {}
@@ -165,6 +169,24 @@ def main(args):
 		features[image_ch].to_csv(output_file,index=False)
 
 	# tracking
+	p = pipeline["pipeline"]["tracking"]
+	class_name = p["name"]
+	class_args = p["args"]
+	class_args["FIJI_DIR"] = p["fiji_dir"]
+
+	# Dynamically instantiate the class
+	if class_args:
+		class_obj = globals()[p["name"]](**class_args)
+	else:
+		class_obj = globals()[p["name"]]()
+	if p["channels"] == "all":
+		channels = images.keys()
+	else:
+		channels = p["channels"]
+
+	for ch in channels:
+		tqdm.write("Tracking channel: {}".format(ch))
+		res = class_obj({"image": images[ch], "feature": features[ch]})
 
 if __name__ == "__main__":
 	args = get_args()
