@@ -155,12 +155,17 @@ def main(args):
 	# convert segmentation mask to trackpy style array
 	features = {}
 
+	print("images: ", images.keys())
+	print("labels: ", labels.keys())
+
 	for image_ch, label_ch in pipeline["pipeline"]["label_to_sparse"]["image_label_pair"]:
 		tqdm.write("Converting segmentation mask to sparse table...")
 		tqdm.write("Image Channel: {}".format(image_ch))
 		tqdm.write("Label Channel: {}".format(label_ch))
 
-		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=pipeline["spacing"],celltype=image_ch)
+		# TODO: fix spacing issue
+		# features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=pipeline["spacing"],celltype=image_ch)
+		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=[1,1],celltype=image_ch)
 
 		output_dir = os.path.join(pipeline["output_dir"],"tracking")
 		output_file = os.path.join(output_dir,"{}.csv".format(image_ch))
@@ -169,10 +174,10 @@ def main(args):
 		features[image_ch].to_csv(output_file,index=False)
 
 	# tracking
-	p = pipeline["pipeline"]["tracking"]
+	p = pipeline["pipeline"]["tracking"][0]
 	class_name = p["name"]
 	class_args = p["args"]
-	class_args["FIJI_DIR"] = p["fiji_dir"]
+	class_args["FIJI_DIR"] = pipeline["fiji_dir"]
 
 	# Dynamically instantiate the class
 	if class_args:

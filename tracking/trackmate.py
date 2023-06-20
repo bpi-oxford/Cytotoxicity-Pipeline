@@ -1,6 +1,8 @@
 from typing import Any
 from tqdm import tqdm
 import tempfile
+import os
+from aicsimageio.writers import OmeTiffWriter
 
 class TrackMate(object):
     def __init__(self, FIJI_DIR="", verbose=True) -> None:
@@ -19,33 +21,41 @@ class TrackMate(object):
         image = data["image"]
         features = data["feature"]
 
-        print(features.columns)
-
         if self.verbose:
             tqdm.write("Cell tracking with TrackMate")
 
         # convert csv to trackmate xml
         # Create a temporary saved csv file
         temp_csv_file = tempfile.NamedTemporaryFile(suffix=".csv", mode="w", delete=False)
+        temp_img_file = tempfile.NamedTemporaryFile(suffix=".tiff", mode="w", delete=False)
+        temp_xml_file = tempfile.NamedTemporaryFile(suffix=".xml", mode="w", delete=False)
         features.to_csv(temp_csv_file.name, index=False)
 
+        OmeTiffWriter.save(image.T, temp_img_file.name, dim_order="TYX")
+
         conversion_command = " ".join([
-            os.path.join(self.FIJI_DIR,),
+            os.path.join(self.FIJI_DIR,"ImageJ-linux64"),
             "--headless",
             os.path.join(self.FIJI_DIR,"scripts","CsvToTrackMate.py"), 
-            "--csvFilePath={}".format(temp_csv_file) 
-            # --imageFilePath="/path/to/MyImage.tif"
-            # --xCol=1 
-            # --radius=2 
-            # --yCol=2 
-            # --zCol=3 
-            # --frameCol=0
-            # --targetFilePath="/path/to/TrackMateFile.xml"
+            "--csvFilePath={}".format(temp_csv_file.name),
+            "--imageFilePath={}".format(temp_img_file.name),
+            "--radius=2.5",
+            "--xCol={}".format(list(features.columns).index("j")),
+            "--yCol={}".format(list(features.columns).index("i")),  
+            "--frameCol={}".format(list(features.columns).index("frame")),
+            "--idCol={}".format(list(features.columns).index("label")),
+            "--nameCol={}".format(list(features.columns).index("cell_type")),
+            "--radiusCol={}".format(list(features.columns).index("feret_radius")),
+            # "--targetFilePath={}".format(temp_xml_file.name),
+            # "--targetFilePath={}".format("/app/cytotoxicity-pipeline/output/tracking/trackmate.xml")
+            "--targetFilePath={}".format("/home/jackyko/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml")
         ])
 
+        print("command:", conversion_command)
 
-        # Close the temporary files
-        temp_file.close()
+        os.system(conversion_command)
+
+        print("CsvToTrackMate script complete")
 
         # print("Image loading on python side...")
         # image = io.imread(IMAGE_PATH)
@@ -70,5 +80,10 @@ class TrackMate(object):
         # print(ij.py.from_java(result.getOutput("foo")))
         # print(ij.py.from_java(result.getOutput("bar")))
         # print(ij.py.from_java(result.getOutput("shape")))
+
+        # Close the temporary files
+        temp_csv_file.close()
+        temp_img_file.close()
+        temp_xml_file.close()
 
         return None

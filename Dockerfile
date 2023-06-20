@@ -9,18 +9,25 @@ RUN apt install -y \
     wget \
     unzip
 
-# fiji install
-WORKDIR /app
-RUN wget https://downloads.micron.ox.ac.uk/fiji_update/mirrors/fiji-latest/fiji-linux64.zip
-RUN unzip fiji-linux64.zip 
-RUN rm fiji-linux64.zip
-WORKDIR /app/Fiji.app
-RUN ./ImageJ-linux64 --headless --ij2 --update add-update-site TrackMateCSVImporter https://sites.imagej.net/TrackMateCSVImporter/
-
-USER mambauser
-
+# install python packages
+USER $MAMBA_USER
 WORKDIR /app/cytotoxicity-pipeline
 COPY . /app/cytotoxicity-pipeline
 RUN pip install -r requirements.txt
+
+# fiji install
+USER root
+WORKDIR /app
+RUN wget https://downloads.micron.ox.ac.uk/fiji_update/mirrors/fiji-latest/fiji-linux64.zip
+RUN unzip /app/fiji-linux64.zip 
+RUN rm /app/fiji-linux64.zip
+WORKDIR /app/Fiji.app
+RUN ./ImageJ-linux64 --headless --ij2 --update add-update-site TrackMateCSVImporter https://sites.imagej.net/TrackMateCSVImporter/
+RUN ./ImageJ-linux64 --headless --ij2 --update update
+RUN chown -R $MAMBA_USER /app
+USER $MAMBA_USER
+
+WORKDIR /app/cytotoxicity-pipeline
+
 EXPOSE 8787
-CMD ["which", "python"]
+# CMD ["pytest"]

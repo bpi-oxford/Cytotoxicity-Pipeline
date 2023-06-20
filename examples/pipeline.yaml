@@ -16,8 +16,8 @@ image_range:
   # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
   y: [0,null,1]
-  t: [0,3,1]
-output_dir: ./output
+  t: [0,200,1]
+output_dir: /home/jackyko/Projects/Cytotoxicity-Pipeline/output
 spacing: [0.8286426,0.8286426] # um
 
 pipeline:
@@ -45,12 +45,12 @@ pipeline:
         nms_thresh: 0.8
       output_type: "label" # only allow label type for segmentation process
       output: True
-    - name: ImageToLabel
-      channels: all
-      input_type: "image"
-      args: null
-      output_type: "label" # only allow label type for segmentation process
-      output: False
+    # - name: ImageToLabel
+    #   channels: all
+    #   input_type: "image"
+    #   args: null
+    #   output_type: "label" # only allow label type for segmentation process
+    #   output: True
   label_to_sparse:
     image_label_pair: [
         [TCell,TCell],
@@ -60,7 +60,8 @@ pipeline:
     output: True
   tracking:
     - name: TrackMate
-      channels: [TCell, Dead, Alive]
+      # channels: [TCell, Dead, Alive]
+      channels: [Alive]
       args:
         verbose: True
       output: True

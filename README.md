@@ -56,7 +56,7 @@ Check [./doc/setup.md](./doc/setup.md) for the setup instruction.
 For quick environment setup use the docker image:
 ```bash
 docker build --pull --rm -f "Dockerfile" -t cytotoxicity-pipeline:latest "."
-docker run --gpus all --rm -it -p 8787:8787/tcp cytotoxicity-pipeline:latest bash
+docker run --gpus all -u $(id -u):$(id -g) -v <path-to-data>:/data --rm -it -p 8787:8787/tcp cytotoxicity-pipeline:latest bash
 ```
 
 ## Usage
