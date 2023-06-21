@@ -70,8 +70,7 @@ def extract_segment_features(image,label,frame,relabel=False,offset=0,cell_type=
                 ]
 
         mutex.release()
-        print(frame, shapeStatFilter.GetLabels()[-1])
-        
+
         return frame, data, shapeStatFilter.GetLabels()[-1]
     except Exception as e:
         mutex.release()

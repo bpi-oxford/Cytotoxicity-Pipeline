@@ -155,9 +155,6 @@ def main(args):
 	# convert segmentation mask to trackpy style array
 	features = {}
 
-	print("images: ", images.keys())
-	print("labels: ", labels.keys())
-
 	for image_ch, label_ch in pipeline["pipeline"]["label_to_sparse"]["image_label_pair"]:
 		tqdm.write("Converting segmentation mask to sparse table...")
 		tqdm.write("Image Channel: {}".format(image_ch))
@@ -167,11 +164,13 @@ def main(args):
 		# features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=pipeline["spacing"],celltype=image_ch)
 		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=[1,1],celltype=image_ch)
 
-		output_dir = os.path.join(pipeline["output_dir"],"tracking")
-		output_file = os.path.join(output_dir,"{}.csv".format(image_ch))
-		os.makedirs(output_dir,exist_ok=True)
-		tqdm.write("Exporting result: {}".format(output_file))
-		features[image_ch].to_csv(output_file,index=False)
+		# export to csv file
+		if pipeline["pipeline"]["label_to_sparse"]["output"]:
+			output_dir = os.path.join(pipeline["output_dir"],"tracking")
+			output_file = os.path.join(output_dir,"{}.csv".format(image_ch))
+			os.makedirs(output_dir,exist_ok=True)
+			tqdm.write("Exporting result: {}".format(output_file))
+			features[image_ch].to_csv(output_file,index=False)
 
 	# tracking
 	p = pipeline["pipeline"]["tracking"][0]
@@ -191,7 +190,14 @@ def main(args):
 
 	for ch in channels:
 		tqdm.write("Tracking channel: {}".format(ch))
-		res = class_obj({"image": images[ch], "feature": features[ch]})
+		res = class_obj({"image": images[ch], "feature": features[ch]},output=p["output"])
+		if p["output"]:
+			output_dir = os.path.join(pipeline["output_dir"],"tracking")
+			output_file = os.path.join(output_dir,"{}.xml".format(ch))
+			os.makedirs(output_dir,exist_ok=True)
+			tqdm.write("Exporting result: {}".format(output_file))
+			with open(output_file, 'w') as f:
+				f.write(res)
 
 if __name__ == "__main__":
 	args = get_args()

@@ -17,7 +17,7 @@ class TrackMate(object):
         self.FIJI_DIR = FIJI_DIR
         self.verbose = verbose
 
-    def __call__(self, data) -> Any:
+    def __call__(self, data, output=False) -> Any:
         image = data["image"]
         features = data["feature"]
 
@@ -46,12 +46,10 @@ class TrackMate(object):
             "--idCol={}".format(list(features.columns).index("label")),
             "--nameCol={}".format(list(features.columns).index("cell_type")),
             "--radiusCol={}".format(list(features.columns).index("feret_radius")),
-            # "--targetFilePath={}".format(temp_xml_file.name),
+            "--targetFilePath={}".format(temp_xml_file.name),
             # "--targetFilePath={}".format("/app/cytotoxicity-pipeline/output/tracking/trackmate.xml")
-            "--targetFilePath={}".format("/home/jackyko/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml")
+            # "--targetFilePath={}".format("/home/jackyko/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml")
         ])
-
-        print("command:", conversion_command)
 
         os.system(conversion_command)
 
@@ -81,9 +79,23 @@ class TrackMate(object):
         # print(ij.py.from_java(result.getOutput("bar")))
         # print(ij.py.from_java(result.getOutput("shape")))
 
-        # Close the temporary files
-        temp_csv_file.close()
-        temp_img_file.close()
-        temp_xml_file.close()
+        if output:
+            # Reading the data inside the xml
+            # file to a variable under the name
+            # data
+            with open(temp_xml_file.name, 'r') as f:
+                data = f.read()
 
-        return None
+            # Close the temporary files
+            temp_csv_file.close()
+            temp_img_file.close()
+            temp_xml_file.close()
+
+            return data
+        else:
+            # Close the temporary files
+            temp_csv_file.close()
+            temp_img_file.close()
+            temp_xml_file.close()
+
+            return None
