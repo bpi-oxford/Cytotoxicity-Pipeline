@@ -91,11 +91,11 @@ class TrackMate(object):
             temp_img_file.close()
             temp_xml_file.close()
 
-            return data
+            return features, data
         else:
             # Close the temporary files
             temp_csv_file.close()
             temp_img_file.close()
             temp_xml_file.close()
 
-            return None
+            return features, None

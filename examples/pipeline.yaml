@@ -16,7 +16,7 @@ image_range:
   # [start,stop,step], null/-1 refers to max range
   x: [0,null,1]
   y: [0,null,1]
-  t: [0,3,1]
+  t: [0,null,1]
 output_dir: /home/jackyko/Projects/Cytotoxicity-Pipeline/output
 spacing: [0.8286426,0.8286426] # um
 

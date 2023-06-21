@@ -116,19 +116,22 @@ def segmentation(images, pipeline):
 
 	return images, labels
 
+def post_processing(features):
+	return features
+
 def main(args):
 	pipeline_file = args.pipeline
 
 	with open(pipeline_file, 'r') as f:
 		pipeline = yaml.safe_load(f)
 
-	# initiate dask cluster
+	#%% initiate dask cluster
 	client = init_dask_cluster()
 
-	# initiate fiji
+	#%% initiate fiji
 	pyimagej_init(FIJI_DIR=pipeline["fiji_dir"])
 	
-	# data loading
+	#%% data loading
 	images = {}
 	for ch, path in pipeline["channels"].items():
 		# Get an AICSImage object
@@ -144,15 +147,15 @@ def main(args):
 	# create output dir
 	os.makedirs(pipeline["output_dir"],exist_ok=True)
 
-	# preprocessing
+	#%% preprocessing
 	if pipeline["pipeline"]["preprocessing"]:
 		images = preprocessing(images,pipeline)
 
-	# segmentation
+	#%% segmentation
 	if pipeline["pipeline"]["segmentation"]:
 		images, labels = segmentation(images,pipeline)
 
-	# convert segmentation mask to trackpy style array
+	#%% convert segmentation mask to trackpy style array
 	features = {}
 
 	for image_ch, label_ch in pipeline["pipeline"]["label_to_sparse"]["image_label_pair"]:
@@ -172,7 +175,7 @@ def main(args):
 			tqdm.write("Exporting result: {}".format(output_file))
 			features[image_ch].to_csv(output_file,index=False)
 
-	# tracking
+	#%% tracking
 	p = pipeline["pipeline"]["tracking"][0]
 	class_name = p["name"]
 	class_args = p["args"]
@@ -190,14 +193,20 @@ def main(args):
 
 	for ch in channels:
 		tqdm.write("Tracking channel: {}".format(ch))
-		res = class_obj({"image": images[ch], "feature": features[ch]},output=p["output"])
+		features[ch], res_xml = class_obj({"image": images[ch], "feature": features[ch]},output=p["output"])
 		if p["output"]:
 			output_dir = os.path.join(pipeline["output_dir"],"tracking")
-			output_file = os.path.join(output_dir,"{}.xml".format(ch))
-			os.makedirs(output_dir,exist_ok=True)
-			tqdm.write("Exporting result: {}".format(output_file))
-			with open(output_file, 'w') as f:
-				f.write(res)
+			# trackmate xml output
+			if res_xml:
+				output_file = os.path.join(output_dir,"{}.xml".format(ch))
+				os.makedirs(output_dir,exist_ok=True)
+				tqdm.write("Exporting result: {}".format(output_file))
+				with open(output_file, 'w') as f:
+					f.write(res_xml)
+
+	#%% postprocessing
+	if pipeline["pipeline"]["postprocessing"]:
+		features = post_processing(features)
 
 if __name__ == "__main__":
 	args = get_args()
