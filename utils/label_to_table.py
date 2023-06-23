@@ -10,7 +10,7 @@ from threading import Lock
 
 mutex = Lock()
 
-def extract_segment_features(image,label,frame,relabel=False,offset=0,cell_type="",spacing=[1,1]):
+def extract_segment_features(image,label,frame,relabel=False,offset=0,channel="",spacing=[1,1]):
     mutex.acquire()
     try: 
         image = sitk.GetImageFromArray(image)
@@ -65,7 +65,7 @@ def extract_segment_features(image,label,frame,relabel=False,offset=0,cell_type=
                 imageStatFilter.GetMedian(i), #median
                 imageStatFilter.GetSigma(i), #sd
                 frame, #frame
-                cell_type, # cell_type
+                channel, # channel
                 np.nan, # alive
                 ]
 
@@ -82,7 +82,7 @@ def merge_dicts(x,y):
     z.update(y)
     return z
 
-def label_to_sparse(label, image=None, spacing=[1,1],celltype=""):
+def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
     # extracting the segment centroids
     columns = [
         "label",
@@ -110,7 +110,7 @@ def label_to_sparse(label, image=None, spacing=[1,1],celltype=""):
         "median",
         "sd",
         "frame",
-        "cell_type",
+        "channel",
         "alive"
         ]
 
@@ -147,7 +147,7 @@ def label_to_sparse(label, image=None, spacing=[1,1],celltype=""):
         
         # for unknown reason multi threaded process get dead lock for certain process, unable to fix
         # pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": celltype, "spacing": spacing}, callback=collect_result)
-        results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, cell_type=celltype, spacing=spacing))
+        results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, channel=channel_name, spacing=spacing))
     pool.close()
     pool.join()
 

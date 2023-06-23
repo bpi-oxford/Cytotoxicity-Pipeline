@@ -8,3 +8,5 @@ stardist
 SimpleITK
 bokeh
 pytest
+scikit-learn
+opencv-python

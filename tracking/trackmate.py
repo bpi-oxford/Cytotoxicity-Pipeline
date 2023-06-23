@@ -55,6 +55,11 @@ class TrackMate(object):
 
         print("CsvToTrackMate script complete")
 
+        """
+        Tracking with TrackMate
+        Export TrackMate file as csv
+        """
+
         # print("Image loading on python side...")
         # image = io.imread(IMAGE_PATH)
         # imp = ij.py.to_imageplus(image)

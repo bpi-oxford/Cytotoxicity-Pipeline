@@ -10,6 +10,9 @@ from segmentation.stardist import *
 from tracking.trackmate import *
 from utils.label_to_table import *
 from utils.utils import *
+from postprocessing.sparse_to_sparse import *
+from postprocessing.sparse_to_dense import *
+from postprocessing.graph import *
 
 def get_args():
 	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
@@ -116,8 +119,113 @@ def segmentation(images, pipeline):
 
 	return images, labels
 
-def post_processing(features):
-	return features
+def post_processing(images, labels, features,pipeline):
+	for p in pipeline["pipeline"]["postprocessing"]:
+		class_name = p["name"]
+		class_args = p["args"]
+
+		# Dynamically instantiate the class
+		class_obj = globals()[p["name"]](**class_args)
+		if p["channels"] == "all":
+			channels = features.keys()
+		else:
+			channels = p["channels"]
+
+		for i, ch in enumerate(channels):
+			if isinstance(ch, str):
+				# inplace update
+				tqdm.write("Channel: {}".format(ch))
+				data = {}
+				if "image" in p["input_type"]:
+					assert ch in images.keys(), "Image {} not in pipeline".format(ch)
+					data["image"] = images[ch]
+				if "label" in p["input_type"]:
+					assert ch in labels.keys(), "Label {} not in pipeline".format(ch)
+					data["label"] = labels[ch]
+				if "feature" in p["input_type"]:
+					assert ch in features.keys(), "Feature {} not in pipeline".format(ch)
+					data["feature"] = features[ch]
+
+				res = class_obj(data)
+				if p["output_type"] == "image":
+					images[p["output_channel_name"][i]] = res["image"]
+				elif p["output_type"] == "feature":
+					features[p["output_channel_name"][i]] = res["feature"]
+			elif isinstance(ch, list):
+				# multiple input
+				tqdm.write("Multi channel input: [{}]".format(', '.join([str(ch_) for ch_ in ch])))
+				data = {}
+				# beware of the difference btw "feature" and "features" keys
+				if "image" in p["input_type"]:
+					images_ = []
+					for ch_ in ch:
+						assert ch_ in images.keys(), "Image {} not in pipeline".format(ch_)
+						images_.append(images[ch_])
+					data["images"] = images_
+				if "label" in p["input_type"]:
+					labels_ = []
+					for ch_ in ch:
+						assert ch_ in labels.keys(), "Label {} not in pipeline".format(ch_)
+						labels_.append(labels[ch_])
+					data["labels"] = labels
+				if "feature" in p["input_type"]:
+					features_ = []
+					for ch_ in ch:
+						assert ch_ in features.keys(), "Feature {} not in pipeline".format(ch_)
+						features_.append(features[ch_])
+					data["features"] = features_
+
+				res = class_obj(data) 
+				if p["output_type"] == "feature":
+					features[p["output_channel_name"][i]] = res["feature"]
+				elif p["output_type"] == "image":
+					images[p["output_channel_name"][i]] = res["image"]
+
+			# export
+			if p["output"]:
+				output_dir = os.path.join(pipeline["output_dir"],"postprocessing",class_name)
+				os.makedirs(output_dir,exist_ok=True)
+				if p["output_type"] in ["image","label"]:
+					output_file = os.path.join(output_dir,"{}.tif".format(p["output_channel_name"][i]))
+				else:
+					output_file = os.path.join(output_dir,"{}.csv".format(p["output_channel_name"][i]))
+				tqdm.write("Exporting result: {}".format(output_file))
+				if p["output_type"] == "image":
+					OmeTiffWriter.save(images[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
+				elif p["output_type"] == "label":
+					OmeTiffWriter.save(labels[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
+				elif p["output_type"] == "feature":
+					features[p["output_channel_name"][i]].to_csv(output_file,index=False)
+	return images, labels, features
+
+def tracking(features, images, pipeline):
+	p = pipeline["pipeline"]["tracking"][0]
+	class_name = p["name"]
+	class_args = p["args"]
+	class_args["FIJI_DIR"] = pipeline["fiji_dir"]
+
+	# Dynamically instantiate the class
+	if class_args:
+		class_obj = globals()[p["name"]](**class_args)
+	else:
+		class_obj = globals()[p["name"]]()
+	if p["channels"] == "all":
+		channels = features.keys()
+	else:
+		channels = p["channels"]
+
+	for ch in channels:
+		tqdm.write("Tracking channel: {}".format(ch))
+		features[ch], res_xml = class_obj({"image": images[ch], "feature": features[ch]},output=p["output"])
+		if p["output"]:
+			output_dir = os.path.join(pipeline["output_dir"],"tracking")
+			# trackmate xml output
+			if res_xml:
+				output_file = os.path.join(output_dir,"{}.xml".format(ch))
+				os.makedirs(output_dir,exist_ok=True)
+				tqdm.write("Exporting result: {}".format(output_file))
+				with open(output_file, 'w') as f:
+					f.write(res_xml)
 
 def main(args):
 	pipeline_file = args.pipeline
@@ -148,11 +256,11 @@ def main(args):
 	os.makedirs(pipeline["output_dir"],exist_ok=True)
 
 	#%% preprocessing
-	if pipeline["pipeline"]["preprocessing"]:
+	if "preprocessing" in pipeline["pipeline"] and pipeline["pipeline"]["preprocessing"]:
 		images = preprocessing(images,pipeline)
 
 	#%% segmentation
-	if pipeline["pipeline"]["segmentation"]:
+	if "segmentation" in pipeline["pipeline"] and pipeline["pipeline"]["segmentation"]:
 		images, labels = segmentation(images,pipeline)
 
 	#%% convert segmentation mask to trackpy style array
@@ -165,7 +273,7 @@ def main(args):
 
 		# TODO: fix spacing issue
 		# features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=pipeline["spacing"],celltype=image_ch)
-		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=[1,1],celltype=image_ch)
+		features[image_ch] = label_to_sparse(label=labels[label_ch],image=images[image_ch],spacing=[1,1],channel_name=image_ch)
 
 		# export to csv file
 		if pipeline["pipeline"]["label_to_sparse"]["output"]:
@@ -176,37 +284,12 @@ def main(args):
 			features[image_ch].to_csv(output_file,index=False)
 
 	#%% tracking
-	p = pipeline["pipeline"]["tracking"][0]
-	class_name = p["name"]
-	class_args = p["args"]
-	class_args["FIJI_DIR"] = pipeline["fiji_dir"]
-
-	# Dynamically instantiate the class
-	if class_args:
-		class_obj = globals()[p["name"]](**class_args)
-	else:
-		class_obj = globals()[p["name"]]()
-	if p["channels"] == "all":
-		channels = images.keys()
-	else:
-		channels = p["channels"]
-
-	for ch in channels:
-		tqdm.write("Tracking channel: {}".format(ch))
-		features[ch], res_xml = class_obj({"image": images[ch], "feature": features[ch]},output=p["output"])
-		if p["output"]:
-			output_dir = os.path.join(pipeline["output_dir"],"tracking")
-			# trackmate xml output
-			if res_xml:
-				output_file = os.path.join(output_dir,"{}.xml".format(ch))
-				os.makedirs(output_dir,exist_ok=True)
-				tqdm.write("Exporting result: {}".format(output_file))
-				with open(output_file, 'w') as f:
-					f.write(res_xml)
+	if "tracking" in pipeline["pipeline"] and pipeline["pipeline"]["tracking"]:
+		features = tracking(features, images ,pipeline)
 
 	#%% postprocessing
-	if pipeline["pipeline"]["postprocessing"]:
-		features = post_processing(features)
+	if "postprocessing" in pipeline["pipeline"] and pipeline["pipeline"]["postprocessing"]:
+		images, labels, features = post_processing(images, labels, features, pipeline)
 
 if __name__ == "__main__":
 	args = get_args()
