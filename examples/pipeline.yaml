@@ -3,10 +3,10 @@ microscope: Confocal_2D+t
 fiji_dir: /home/jackyko/Jacky/Software/Fiji.app
 channels: 
   # path to the tiff files
-  TCell: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
-  Brightfield: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
-  Dead: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
-  Alive: /mnt/Imaging/Idrive/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
+  TCell: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
+  Brightfield: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
+  Dead: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
+  Alive: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
 
   # TCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/TCell.tif
   # Dead: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/DeadCell.tif
@@ -69,7 +69,7 @@ pipeline:
     - name: CrossTableOperation
       channels: [[Alive,Dead]]
       input_type: ["feature"]
-      output_type: "feature"
+      output_type: ["feature"]
       args:
         column: mean
         operation: divide
@@ -78,7 +78,7 @@ pipeline:
     - name: CrossTableOperation
       channels: [[CancerCell,Dead]]
       input_type: ["feature"]
-      output_type: "feature"
+      output_type: ["feature"]
       args:
         column: median
         operation: divide
@@ -87,10 +87,29 @@ pipeline:
     - name: KernelDensityEstimation
       channels: [CancerCell,TCell]
       input_type: ["image","feature"]
-      output_type: "image"
+      output_type: ["image"]
       args: 
         base_image: False
+        downscale_factor: 4
         gradient: False
       output_channel_name: [CancerCellKDE, TCellKDE]
       output: True
-      
+    - name: CellTriangulation
+      channels: [CancerCell,TCell]
+      input_type: ["image","feature"]
+      output_type: ["image", "network"]
+      args: 
+        base_image: False
+        downscale_factor: 4
+      output_channel_name: [CancerCellNetwork, TCellNetwork]
+      output: True
+    # network measurements
+    # single connected graph measurements
+    # clustering coefficient
+    # degree correlation
+    # centrality measurements
+    # degree of distribution
+    # cell distance between different types
+    # cell contact count
+    # instantaneous interacting cells
+    

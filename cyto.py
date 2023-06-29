@@ -13,6 +13,7 @@ from utils.utils import *
 from postprocessing.sparse_to_sparse import *
 from postprocessing.sparse_to_dense import *
 from postprocessing.graph import *
+import networkx as nx
 
 def get_args():
 	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
@@ -119,7 +120,7 @@ def segmentation(images, pipeline):
 
 	return images, labels
 
-def post_processing(images, labels, features,pipeline):
+def post_processing(images, labels, features, networks, pipeline):
 	for p in pipeline["pipeline"]["postprocessing"]:
 		class_name = p["name"]
 		class_args = p["args"]
@@ -147,10 +148,13 @@ def post_processing(images, labels, features,pipeline):
 					data["feature"] = features[ch]
 
 				res = class_obj(data)
-				if p["output_type"] == "image":
-					images[p["output_channel_name"][i]] = res["image"]
-				elif p["output_type"] == "feature":
-					features[p["output_channel_name"][i]] = res["feature"]
+				for output_type in p["output_type"]:
+					if output_type == "image":
+						images[p["output_channel_name"][i]] = res["image"]
+					elif output_type == "feature":
+						features[p["output_channel_name"][i]] = res["feature"]
+					elif output_type == "network":
+						networks[p["output_channel_name"][i]] = res["network"]
 			elif isinstance(ch, list):
 				# multiple input
 				tqdm.write("Multi channel input: [{}]".format(', '.join([str(ch_) for ch_ in ch])))
@@ -176,27 +180,36 @@ def post_processing(images, labels, features,pipeline):
 					data["features"] = features_
 
 				res = class_obj(data) 
-				if p["output_type"] == "feature":
-					features[p["output_channel_name"][i]] = res["feature"]
-				elif p["output_type"] == "image":
-					images[p["output_channel_name"][i]] = res["image"]
+				for output_type in p["output_type"]:
+					if output_type == "feature":
+						features[p["output_channel_name"][i]] = res["feature"]
+					elif output_type == "image":
+						images[p["output_channel_name"][i]] = res["image"]
+					elif output_type == "network":
+						networks[p["output_channel_name"][i]] = res["network"]
 
 			# export
 			if p["output"]:
 				output_dir = os.path.join(pipeline["output_dir"],"postprocessing",class_name)
 				os.makedirs(output_dir,exist_ok=True)
-				if p["output_type"] in ["image","label"]:
-					output_file = os.path.join(output_dir,"{}.tif".format(p["output_channel_name"][i]))
-				else:
-					output_file = os.path.join(output_dir,"{}.csv".format(p["output_channel_name"][i]))
-				tqdm.write("Exporting result: {}".format(output_file))
-				if p["output_type"] == "image":
-					OmeTiffWriter.save(images[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
-				elif p["output_type"] == "label":
-					OmeTiffWriter.save(labels[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
-				elif p["output_type"] == "feature":
-					features[p["output_channel_name"][i]].to_csv(output_file,index=False)
-	return images, labels, features
+				for output_type in p["output_type"]:
+					if output_type in ["image","label"]:
+						output_file = os.path.join(output_dir,"{}.tif".format(p["output_channel_name"][i]))
+					elif output_type == "feature":
+						output_file = os.path.join(output_dir,"{}.csv".format(p["output_channel_name"][i]))
+					tqdm.write("Exporting result: {}".format(output_file))
+					if output_type == "image":
+						OmeTiffWriter.save(images[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
+					elif output_type == "label":
+						OmeTiffWriter.save(labels[p["output_channel_name"][i]].T, output_file, dim_order="TYX")
+					elif output_type == "feature":
+						features[p["output_channel_name"][i]].to_csv(output_file,index=False)
+					elif output_type == "network":
+						for frame, network in enumerate(networks[p["output_channel_name"][i]]):
+							output_file = os.path.join(output_dir,"{}_{}.adjlist".format(p["output_channel_name"][i],str(frame).zfill(4)))
+							nx.write_multiline_adjlist(network,output_file)
+							# nx.write_gexf(network,output_file)
+	return images, labels, features, networks
 
 def tracking(features, images, pipeline):
 	p = pipeline["pipeline"]["tracking"][0]
@@ -287,9 +300,10 @@ def main(args):
 	if "tracking" in pipeline["pipeline"] and pipeline["pipeline"]["tracking"]:
 		features = tracking(features, images ,pipeline)
 
+	networks = {}
 	#%% postprocessing
 	if "postprocessing" in pipeline["pipeline"] and pipeline["pipeline"]["postprocessing"]:
-		images, labels, features = post_processing(images, labels, features, pipeline)
+		images, labels, features, networks = post_processing(images, labels, features, networks, pipeline)
 
 if __name__ == "__main__":
 	args = get_args()
