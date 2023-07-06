@@ -100,16 +100,16 @@ pipeline:
       output_type: ["image", "network"]
       args: 
         base_image: False
-        downscale_factor: 4
       output_channel_name: [CancerCellNetwork, TCellNetwork]
       output: True
-    # network measurements
-    # single connected graph measurements
-    # clustering coefficient
-    # degree correlation
-    # centrality measurements
-    # degree of distribution
-    # cell distance between different types
-    # cell contact count
+    - name: CrossCellContactMeasures
+      channels: [[CancerCell,TCell]]
+      input_type: ["image","label","feature"]
+      output_type: ["image", "network"]
+      args:
+        base_image: False
+      output_channel_name: [CrossCells]
+      output: True
+
     # instantaneous interacting cells
     

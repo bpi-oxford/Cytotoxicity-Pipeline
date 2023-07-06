@@ -171,7 +171,7 @@ def post_processing(images, labels, features, networks, pipeline):
 					for ch_ in ch:
 						assert ch_ in labels.keys(), "Label {} not in pipeline".format(ch_)
 						labels_.append(labels[ch_])
-					data["labels"] = labels
+					data["labels"] = labels_
 				if "feature" in p["input_type"]:
 					features_ = []
 					for ch_ in ch:
@@ -179,6 +179,9 @@ def post_processing(images, labels, features, networks, pipeline):
 						features_.append(features[ch_])
 					data["features"] = features_
 
+				# TODO: check device memory allocation and release
+				os.system("nvidia-smi --query-gpu=memory.used --format=csv")
+            	
 				res = class_obj(data) 
 				for output_type in p["output_type"]:
 					if output_type == "feature":
