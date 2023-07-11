@@ -103,13 +103,10 @@ pipeline:
       output_channel_name: [CancerCellNetwork, TCellNetwork]
       output: True
     - name: CrossCellContactMeasures
-      channels: [[CancerCell,TCell]]
+      channels: [[TCell,CancerCell],[CancerCell,TCell]]
       input_type: ["image","label","feature"]
-      output_type: ["image", "network"]
+      output_type: ["image", "feature", "network"]
       args:
         base_image: False
-      output_channel_name: [CrossCells]
+      output_channel_name: [TCellToCancerCell,CancerCellToTCell]
       output: True
-
-    # instantaneous interacting cells
-    

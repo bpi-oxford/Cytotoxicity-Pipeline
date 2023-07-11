@@ -127,31 +127,29 @@ class CrossCellContactMeasures(object):
         assert len(features) == 2, "Input features must be 2"
         START_FRAME = features[0].frame.min()
         END_FRAME = features[0].frame.max()
+        features_out = features[0].copy()
 
         graph = []
         network_image = None
+        contact = []
+        contact_label = []
+        closest_cell_dist = []
 
         for CUR_FRAME in tqdm(range(START_FRAME,END_FRAME+1)):
-            print("Frame: ", CUR_FRAME)
-            os.system("nvidia-smi --query-gpu=memory.used --format=csv")
+            # print("Frame: ", CUR_FRAME)
+            # os.system("nvidia-smi --query-gpu=memory.used --format=csv")
             # TODO: check device memory allocation and release
             tail = 1
 
             c = []
             c_count = []
             for i, label in enumerate(labels):
-                # centroids = label_centroids_to_pointlist_sitk(sitk.GetImageFromArray(label[:,:,CUR_FRAME]))[["x","y"]].to_numpy().T
-
                 centroids = features[i][features[i].frame==CUR_FRAME][["i","j"]].to_numpy().T
-                tqdm.write("Cell type {} count: {}".format(i,centroids.shape[1]))
-
                 c.append(centroids)
                 c_count.append(centroids.shape[1])
 
             # generate distance matrix
-            distance_matrix = cle.generate_distance_matrix(c[0], c[1])
-
-            print(labels[0][:,:,CUR_FRAME].shape)
+            distance_matrix_device = cle.generate_distance_matrix(c[0], c[1])
 
             statFilter = sitk.LabelShapeStatisticsImageFilter()
             statFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
@@ -166,9 +164,9 @@ class CrossCellContactMeasures(object):
             statFilter = sitk.LabelShapeStatisticsImageFilter()
             statFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
 
-            overlap_matrix = cle.generate_binary_overlap_matrix(labels[0][:,:,CUR_FRAME], labels[1][:,:,CUR_FRAME])
+            overlap_matrix_device = cle.generate_binary_overlap_matrix(labels[0][:,:,CUR_FRAME], labels[1][:,:,CUR_FRAME])
 
-            masked_distance_matrix = cle.multiply_images(overlap_matrix,distance_matrix)
+            masked_distance_matrix = cle.multiply_images(overlap_matrix_device,distance_matrix_device)
 
             pointlist = np.concatenate(c,axis=1)
             distance_matrix_pivot = np.zeros((c_count[0]+c_count[1]+1,c_count[0]+c_count[1]+1))
@@ -181,11 +179,19 @@ class CrossCellContactMeasures(object):
 
             networkx_graph_two_cell_types_overlap = cle.to_networkx(distance_matrix_pivot, pointlist)
             graph.append(networkx_graph_two_cell_types_overlap)
+
+            # pulling data from device to host
+            distance_matrix_host = cle.pull(distance_matrix_device)
+            overlap_matrix_host = cle.pull(overlap_matrix_device)
             distance_mesh_host = cle.pull(distance_mesh_device)
 
             # memory clean up
-
+            distance_matrix_device.data.release()
+            overlap_matrix_device.data.release()
             distance_mesh_device.data.release()
+            del distance_matrix_device
+            del overlap_matrix_device
+            del distance_mesh_device
 
             if network_image is None:
                 network_image = np.expand_dims(distance_mesh_host, axis=-1)
@@ -193,5 +199,20 @@ class CrossCellContactMeasures(object):
                 network_image = np.concatenate([network_image,np.expand_dims(distance_mesh_host,axis=-1)],axis=-1)
 
             # use the masked_distance_matrix to combine with features table
+            f_0 = features[0][features[0].frame==CUR_FRAME]
+            
+            for i in range(1,len(f_0.index)+1):
+                overlap = overlap_matrix_host[1:,i]
+                dist = distance_matrix_host[1:,i]
 
-        return {"image": network_image, "network": graph}
+                cell_label_offset = len(features[1][features[1].frame<CUR_FRAME].index)
+
+                contact.append(True) if np.sum(overlap)>0 else contact.append(False)
+                contact_label.append(np.where(overlap == 1)[0]+cell_label_offset+1) # cell label starts from 1 so need to offset extra 1
+                closest_cell_dist.append(np.min(dist))
+
+        features_out["contact"] = contact
+        features_out["contacting cell labels"] = contact_label
+        features_out["closest cell dist"] = closest_cell_dist
+
+        return {"image": network_image, "feature": features_out, "network": graph}

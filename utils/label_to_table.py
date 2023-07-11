@@ -148,7 +148,6 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
         # for unknown reason multi threaded process get dead lock for certain process, unable to fix
         # pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": celltype, "spacing": spacing}, callback=collect_result)
         results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, channel=channel_name, spacing=spacing))
-        print("frame:",frame, "labels:", results_iter[-1][2])
     pool.close()
     pool.join()
 
