@@ -1,0 +1,66 @@
+description: Cytotoxicity batch run pipeline file
+microscope: Confocal_2D+t
+fiji_dir: /home/jackyko/Jacky/Software/Fiji.app
+channels: 
+  # path to the tiff files
+  TCell: /data/C1_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_CellTrackerDeepRed_640nm_Tcells.tif
+  Brightfield: /data/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
+  Dead: /data/C3_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_PI_514nm_dead_cells.tif
+  Alive: /data/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
+
+  # TCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/TCell.tif
+  # Dead: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/DeadCell.tif
+  # Alive: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif
+  # CancerCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif
+image_range:
+  # [start,stop,step], null/-1 refers to max range
+  x: [0,null,1]
+  y: [0,null,1]
+  t: [0,3,1]
+output_dir: /app/cytotoxicity-pipeline/output
+spacing: [0.8286426,0.8286426] # um
+
+pipeline:
+  preprocessing:
+    - name: ChannelMerge # multiple channel input and new output channel
+      channels: [[Dead, Alive]]
+      args:
+        verbose: True
+      output_channel_name: CancerCell
+      output: True
+    - name: PercentileNormalization
+      channels: all #effective channels, can be a list of channel names matching path input
+      args:
+        lp: 5
+        up: 95
+        verbose: True
+      output: True
+  segmentation:
+    - name: StarDist
+      channels: [TCell,CancerCell]
+      input_type: "image" # allows image/label input type
+      args: 
+        model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
+        prob_thresh: 0.3
+        nms_thresh: 0.8
+      output_type: "label" # only allow label type for segmentation process
+      output: True
+    # - name: ImageToLabel
+    #   channels: all
+    #   input_type: "image"
+    #   args: null
+    #   output_type: "label" # only allow label type for segmentation process
+    #   output: True
+  label_to_sparse:
+    image_label_pair: [
+        [TCell,TCell],
+        [Dead,CancerCell],
+        [Alive,CancerCell]
+      ]
+    output: True
+  tracking:
+    - name: TrackMate
+      channels: [TCell, Dead, Alive]
+      args:
+        verbose: True
+      output: True
