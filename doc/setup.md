@@ -18,12 +18,26 @@ We have to install through mamba/conda instead of pip for better version control
 ```bash
 mamba install -c rapidsai -c conda-forge -c nvidia dask-cuda cudatoolkit=11.8
 ```
-
 ### Tensorflow
-For Stardist segmentation we recommend to use TF2 verison. Follow the instruction for [TF 2.12 installation](https://www.tensorflow.org/install/pip).
+For Stardist segmentation we recommend to use TF2 version. Follow the instruction for [TF 2.12 installation](https://www.tensorflow.org/install/pip).
 
 ### pyTorch
 For Cellpose segmentation we recommend to use pyTorch 2.0.. Follow the instruction for [pyTorch installation](https://pytorch.org/get-started/locally/).
+
+
+### CUDA and CUDNN Versions
+❗The conda environment file automatically choose the compatible version between Tensorflow and pyTorch under same CUDA (11.8) and CUDNN (8.6) settings. If you find CUDA or CUDNN version inconsistency by faulty loading the machine base CUDA libraries, use the following Conda virtual environment setting to override the system-wide paths:
+```bash
+conda activate cyto
+conda install -c conda-forge cudatoolkit=11.8.0
+python3 -m pip install nvidia-cudnn-cu11==8.6.0.163
+mkdir -p $CONDA_PREFIX/etc/conda/activate.d
+echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+echo 'export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:$CUDNN_PATH/lib:$LD_LIBRARY_PATH' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+source $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+# Verify install:
+python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+```
 
 ## Required Packages
 
