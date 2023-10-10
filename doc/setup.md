@@ -37,6 +37,8 @@ echo 'export LD_LIBRARY_PATH=$CONDA_PREFIX/lib/:$CUDNN_PATH/lib:$LD_LIBRARY_PATH
 source $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 # Verify install:
 python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+# Verify CUDA and CUDNN
+python3 -c "import tensorflow as tf; input_shape = (4, 28, 28, 3); x = tf.random.normal(input_shape); y = tf.keras.layers.Conv2D(2, 3, activation='relu', input_shape=input_shape[1:])(x); print(y.shape)"
 ```
 
 ## Required Packages
