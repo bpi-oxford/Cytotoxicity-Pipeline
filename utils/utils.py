@@ -34,11 +34,12 @@ class ChannelMerge(object):
 
         # weighted combination
         ch_means = [np.mean(image) for image in images]
+        weights = [1/i for i in ch_means]
 
         weighted_combine = np.zeros_like(images[0])
 
         for ch in range(len(images)):
-            weighted = ch_means[ch]/np.sum(ch_means)*images[ch]
+            weighted = weights[ch]/np.sum(weights)*images[ch]
             weighted_combine += weighted.astype(images[0].dtype)
 
         return {"output": weighted_combine}
