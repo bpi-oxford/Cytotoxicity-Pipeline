@@ -253,7 +253,7 @@ def main(args):
 	client = init_dask_cluster()
 
 	#%% initiate fiji
-	pyimagej_init(FIJI_DIR=pipeline["fiji_dir"])
+	ij = pyimagej_init(FIJI_DIR=pipeline["fiji_dir"])
 	
 	#%% data loading
 	images = {}

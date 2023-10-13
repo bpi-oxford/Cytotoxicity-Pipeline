@@ -36,3 +36,30 @@ class PercentileNormalization(object):
         )
 
         return {"image": image.astype(img_type)}
+    
+class GammaCorrection(object):
+    def __init__(self, gamma=1.0, gain=1, verbose=True) -> None:
+        """
+        Perform gamma correction across entire image/stack
+        Args:
+            gamme (float): gamma for gamma correction
+            gain (float): gain for gamme correction
+            verbose (bool): Turn on or off the processing printout
+        """
+        self.name = "GammaCorrection"
+        self.gamma = gamma
+        self.gain = gain
+        self.verbose = verbose
+
+    def __call__(self, data)->Any:
+        image = data["image"]
+        image_type = image.dtype
+
+        if self.verbose:
+            tqdm.write("Gamma correction:\nGamma:{}\nGain:{}]".format(self.gamma, self.gain))
+
+        print(image.shape)
+        gamma_corr = exposure.adjust_gamma(image, gamma=self.gamma,gain=self.gain)
+        print(gamma_corr.shape)
+
+        return {"image": gamma_corr.astype(image_type)}
