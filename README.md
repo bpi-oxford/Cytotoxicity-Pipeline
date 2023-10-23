@@ -21,14 +21,15 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [ ] Simple thresholding
   - [ ] Otsu thresholding
   - [x] StarDist
-  - [ ] Cellpose
+  - [x] Cellpose
   - [ ] Morphological operations
   - [x] Connected components 
 - Tracking
   - [x] Feature measurements
   - [ ] trackpy
-  - [ ] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
+  - [x] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
   - [ ] btrack
+  - [ ] ultrack
 - Contact Tracing
   - [ ] Number of contacts (same cell type/ different cell types)
   - [ ] Contact time measurements
@@ -75,6 +76,9 @@ Check the pipeline YAML example in [./examples/pipeline.yaml](./examples/pipelin
 
 ## Development Guide
 For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.md).
+
+## TODO
+- pip package install
 
 ## Authors
 Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
