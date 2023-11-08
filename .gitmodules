@@ -1,0 +1,3 @@
+[submodule "distributed"]
+	path = distributed
+	url = git@github.com:bpi-oxford/Cytotoxicity-Pipeline-Distributed.git
