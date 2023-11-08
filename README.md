@@ -79,6 +79,8 @@ For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.m
 
 ## TODO
 - pip package install
+- GUI pipeline configuration
 
 ## Authors
-Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
+- Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
+- Veronika Pfannenstill: [veronika.pfannenstill@stx.ox.ac.uk](mailto:veronika.pfannenstill@stx.ox.ac.uk)
