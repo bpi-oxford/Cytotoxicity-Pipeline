@@ -7,6 +7,8 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
 - File IO
   - [x] Multi-channel image handling pipeline
   - [x] Dask implementation 
+  - [ ] OME ZARR IO
+
 - Preprocessing
   - [ ] Decovolution
   - [ ] Flat field correction
@@ -15,6 +17,8 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [x] Intensity normalization
   - [ ] Pixel size normalization
   - [x] Channel merge
+  - [ ] Cross channel pixel correlation
+
 - Segmentation
   
   Detection masks and cell centroids are expect to be in trackpy compatible format
