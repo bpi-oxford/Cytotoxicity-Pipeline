@@ -9,7 +9,7 @@ import imagej
 import imagej.doctor
 
 class TrackMate(object):
-    def __init__(self, FIJI_DIR="", ij=None, linking_max_distance=15.0, max_frame_gap=5, gap_closing_max_distance=15.0, verbose=True) -> None:
+    def __init__(self, FIJI_DIR="", ij=None, linking_max_distance=15.0, max_frame_gap=5, gap_closing_max_distance=15.0, size_min=None, verbose=True) -> None:
         """
         Perform TrackMate tracking with pyimagej wrapping
 
@@ -23,6 +23,7 @@ class TrackMate(object):
                 between a spot in frame t and a successor spots in frame t+2, effectively \
                 bridging over one missed detection in one frame.
             gap_closing_max_distance (float): Gap-closing max spatial distance. The max distance between two spots, in physical units, allowed for creating links over missing detections.
+            size_min (int): Minimum cell size to filter out small cells
             verbose (bool): Turn on or off the processing printout
         """
         self.name = "TrackMate"
@@ -31,6 +32,7 @@ class TrackMate(object):
         self.linking_max_distance = linking_max_distance
         self.max_frame_gap = max_frame_gap
         self.gap_closing_max_distance = gap_closing_max_distance
+        self.size_min = size_min
         self.verbose = verbose
 
     def __call__(self, data, output=False) -> Any:
@@ -39,6 +41,10 @@ class TrackMate(object):
 
         if self.verbose:
             tqdm.write("Cell tracking with TrackMate")
+
+        # filter by cell features
+        if self.size_min is not None:
+            features = features[features["size"]>self.size_min]
 
         # convert csv to trackmate xml
         # Create a temporary saved csv file
@@ -149,9 +155,9 @@ def main():
     feature["cell_type"] = np.nan
     
     param_grid = {
-        "linking_max_distance": range(5,21,5),
-        "max_frame_gap": range(1,6,1),
-        "gap_closing_max_distance": range(5,21,5),
+        "linking_max_distance": range(20,26,2),
+        "max_frame_gap": range(4,6,1),
+        "gap_closing_max_distance": range(10,26,2),
         }
     
     params = list(ParameterGrid(param_grid))
@@ -166,13 +172,14 @@ def main():
     ij = imagej.init(FIJI_DIR,mode='headless')
     print(ij.getApp().getInfo(True))
 
-    pbar = tqdm(params[:5])
+    pbar = tqdm(params[0:])
     for param in pbar:
         tm = TrackMate(FIJI_DIR=FIJI_DIR,
                        ij=ij,
                        gap_closing_max_distance=param["gap_closing_max_distance"],
                        linking_max_distance=param["linking_max_distance"],
-                       max_frame_gap=param["max_frame_gap"]
+                       max_frame_gap=param["max_frame_gap"],
+                       size_min=3
                        )
         tm({"image": image, "feature":feature})
 

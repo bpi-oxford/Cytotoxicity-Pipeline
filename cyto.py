@@ -7,6 +7,7 @@ from aicsimageio.writers import OmeTiffWriter
 from init import *
 from preprocessing.normalization import *
 from segmentation.stardist import *
+from segmentation.cellpose import *
 from tracking.trackmate import *
 from utils.label_to_table import *
 from utils.utils import *
