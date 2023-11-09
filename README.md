@@ -7,6 +7,8 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
 - File IO
   - [x] Multi-channel image handling pipeline
   - [x] Dask implementation 
+  - [ ] OME ZARR IO
+
 - Preprocessing
   - [ ] Decovolution
   - [ ] Flat field correction
@@ -15,20 +17,23 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [x] Intensity normalization
   - [ ] Pixel size normalization
   - [x] Channel merge
+  - [ ] Cross channel pixel correlation
+
 - Segmentation
   
   Detection masks and cell centroids are expect to be in trackpy compatible format
   - [ ] Simple thresholding
   - [ ] Otsu thresholding
   - [x] StarDist
-  - [ ] Cellpose
+  - [x] Cellpose
   - [ ] Morphological operations
   - [x] Connected components 
 - Tracking
   - [x] Feature measurements
   - [ ] trackpy
-  - [ ] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
+  - [x] TrackMate (pyImageJ integration, script based automation, with user provided centroids/segmentation masks)
   - [ ] btrack
+  - [ ] ultrack
 - Contact Tracing
   - [ ] Number of contacts (same cell type/ different cell types)
   - [ ] Contact time measurements
@@ -76,5 +81,10 @@ Check the pipeline YAML example in [./examples/pipeline.yaml](./examples/pipelin
 ## Development Guide
 For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.md).
 
+## TODO
+- pip package install
+- GUI pipeline configuration
+
 ## Authors
-Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
+- Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
+- Veronika Pfannenstill: [veronika.pfannenstill@stx.ox.ac.uk](mailto:veronika.pfannenstill@stx.ox.ac.uk)
