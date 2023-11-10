@@ -5,17 +5,6 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers import OmeTiffWriter
 from init import *
-<<<<<<< HEAD:cyto.py
-from preprocessing.normalization import *
-from segmentation.stardist import *
-from segmentation.cellpose import *
-from tracking.trackmate import *
-from utils.label_to_table import *
-from utils.utils import *
-from postprocessing.sparse_to_sparse import *
-from postprocessing.sparse_to_dense import *
-from postprocessing.graph import *
-=======
 from cyto.preprocessing.normalization import *
 from cyto.segmentation.stardist import *
 from cyto.tracking.trackmate import *
@@ -24,7 +13,6 @@ from cyto.utils.utils import *
 from cyto.postprocessing.sparse_to_sparse import *
 from cyto.postprocessing.sparse_to_dense import *
 from cyto.postprocessing.graph import *
->>>>>>> main:main.py
 import networkx as nx
 import pkg_resources
 
