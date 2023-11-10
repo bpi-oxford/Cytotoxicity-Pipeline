@@ -16,5 +16,8 @@ setup(
         "console_scripts":[
             "cyto = main:main",
         ]
+    },
+    package_data={
+        "": ["desc.txt"]
     }
 )

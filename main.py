@@ -14,9 +14,18 @@ from cyto.postprocessing.sparse_to_sparse import *
 from cyto.postprocessing.sparse_to_dense import *
 from cyto.postprocessing.graph import *
 import networkx as nx
+import pkg_resources
+
+def load_description_from_file(file_path):
+	with open(file_path, 'r') as file:
+		description = file.read()
+	return description
 
 def get_args():
-	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
+	# Load the description from the file
+	desc_file_path = pkg_resources.resource_filename(__name__, 'desc.txt')
+	desc = load_description_from_file(desc_file_path)
+	parser = argparse.ArgumentParser(description=desc)
 
 	parser.add_argument(
 		'-v', '--verbose',
