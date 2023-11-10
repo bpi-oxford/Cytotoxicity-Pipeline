@@ -1,13 +1,14 @@
-# Cytotoxicity-Pipeline
-A pipelined workflow for confocal cytotoxicity data.
+# Python Cytotoxicity Pipeline (pyCyto)
+A pipelined workflow package for microscopic cytotoxicity analysis, intentionally designed for high extension flexibility and experiment repeatability.
 
-Users may provide a YAML sript for a quick configuration of the analysis pipeline. 
+Users may provide a YAML script for a quick configuration of the analysis pipeline. 
 
 ## Processing pipeline
 - File IO
   - [x] Multi-channel image handling pipeline
   - [x] Dask implementation 
   - [ ] OME ZARR IO
+  - [ ] Nifti 
 
 - Preprocessing
   - [ ] Decovolution
@@ -44,7 +45,7 @@ Users may provide a YAML sript for a quick configuration of the analysis pipelin
   - [ ] Displacement, velocity
   - [ ] Analysis plots
  
-The result Pandas table should looks like the following
+The result Pandas table should take the following format:
 | Id | Track | x | y | z | t | alive | vel_x | vel_z | vel_y | contact_same | contact_diff | contact_same_id | contacting_diff_id |
 |:--:|:-----:|:-:|:-:|---|---|-------|-------|-------|-------|--------------|--------------|-----------------|--------------------|
 |  0 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
@@ -53,7 +54,6 @@ The result Pandas table should looks like the following
 |  3 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 
 ## Environment Setup
-
 ### Native Python Runtime
 Check [./doc/setup.md](./doc/setup.md) for the setup instruction.
 
@@ -64,10 +64,25 @@ docker build --pull --rm -f "Dockerfile" -t cytotoxicity-pipeline:latest "."
 docker run --gpus all -u $(id -u):$(id -g) -v <path-to-data>:/data --rm -it -p 8787:8787/tcp cytotoxicity-pipeline:latest bash
 ```
 
-## Usage
-
+## Package Installation
+### PIP
 ```bash
-python cyto.py --pipeline <path-to-pipeline.yaml> -v
+pip install git+https://github.com/bpi-oxford/Cytotoxicity-Pipeline
+```
+
+### From Source
+```bash
+git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
+pip install -e .
+```
+
+## Usage
+```bash
+# Single Node
+cyto --pipeline <path-to-pipeline.yaml> -v
+
+# Run from source
+python main.py --pipeline <path-to-pipeline.yaml> -v
 ```
 
 During runtime a Dask daskboard is created. Usually you can access with the address: http://localhost:8787/status, but check if the port is matches output on the line:
@@ -76,15 +91,17 @@ During runtime a Dask daskboard is created. Usually you can access with the addr
 ```
 
 ### YAML Example
-Check the pipeline YAML example in [./examples/pipeline.yaml](./examples/pipeline.yaml)
+Check the pipeline YAML example in [./pipelines/pipeline.yaml](./pipelines/pipeline.yaml)
 
 ## Development Guide
 For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.md).
 
 ## TODO
-- pip package install
 - GUI pipeline configuration
+- SLURM distributed run
+- SimpleITK and OpenCV function wrapper
 
 ## Authors
 - Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
 - Veronika Pfannenstill: [veronika.pfannenstill@stx.ox.ac.uk](mailto:veronika.pfannenstill@stx.ox.ac.uk)
+- Samuel Alber: [salber@berkeley.edu](mailto:salber@berkeley.edu)
