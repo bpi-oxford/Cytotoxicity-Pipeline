@@ -1,4 +1,4 @@
-# Cytotoxicity-Pipeline (pyCyto)
+# Python Cytotoxicity Pipeline (pyCyto)
 A pipelined workflow package for microscopic cytotoxicity analysis, intentionally designed for high extension flexibility and experiment repeatability.
 
 Users may provide a YAML script for a quick configuration of the analysis pipeline. 
@@ -8,6 +8,7 @@ Users may provide a YAML script for a quick configuration of the analysis pipeli
   - [x] Multi-channel image handling pipeline
   - [x] Dask implementation 
   - [ ] OME ZARR IO
+  - [ ] Nifti 
 
 - Preprocessing
   - [ ] Decovolution
@@ -98,6 +99,7 @@ For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.m
 ## TODO
 - GUI pipeline configuration
 - SLURM distributed run
+- SimpleITK and OpenCV function wrapper
 
 ## Authors
 - Jacky Ka Long Ko: [ka.ko@kennedy.ox.ac.uk](mailto:ka.ko@kennedy.ox.ac.uk)
