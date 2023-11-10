@@ -5,14 +5,14 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers import OmeTiffWriter
 from init import *
-from preprocessing.normalization import *
-from segmentation.stardist import *
-from tracking.trackmate import *
-from utils.label_to_table import *
-from utils.utils import *
-from postprocessing.sparse_to_sparse import *
-from postprocessing.sparse_to_dense import *
-from postprocessing.graph import *
+from cyto.preprocessing.normalization import *
+from cyto.segmentation.stardist import *
+from cyto.tracking.trackmate import *
+from cyto.utils.label_to_table import *
+from cyto.utils.utils import *
+from cyto.postprocessing.sparse_to_sparse import *
+from cyto.postprocessing.sparse_to_dense import *
+from cyto.postprocessing.graph import *
 import networkx as nx
 
 def get_args():
@@ -243,7 +243,8 @@ def tracking(features, images, pipeline):
 				with open(output_file, 'w') as f:
 					f.write(res_xml)
 
-def main(args):
+def main():
+	args = get_args()
 	pipeline_file = args.pipeline
 
 	with open(pipeline_file, 'r') as f:
@@ -309,5 +310,4 @@ def main(args):
 		images, labels, features, networks = post_processing(images, labels, features, networks, pipeline)
 
 if __name__ == "__main__":
-	args = get_args()
-	main(args)
+	main()
