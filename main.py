@@ -5,6 +5,7 @@ import yaml
 from aicsimageio import AICSImage
 from aicsimageio.writers import OmeTiffWriter
 from init import *
+<<<<<<< HEAD:cyto.py
 from preprocessing.normalization import *
 from segmentation.stardist import *
 from segmentation.cellpose import *
@@ -14,10 +15,29 @@ from utils.utils import *
 from postprocessing.sparse_to_sparse import *
 from postprocessing.sparse_to_dense import *
 from postprocessing.graph import *
+=======
+from cyto.preprocessing.normalization import *
+from cyto.segmentation.stardist import *
+from cyto.tracking.trackmate import *
+from cyto.utils.label_to_table import *
+from cyto.utils.utils import *
+from cyto.postprocessing.sparse_to_sparse import *
+from cyto.postprocessing.sparse_to_dense import *
+from cyto.postprocessing.graph import *
+>>>>>>> main:main.py
 import networkx as nx
+import pkg_resources
+
+def load_description_from_file(file_path):
+	with open(file_path, 'r') as file:
+		description = file.read()
+	return description
 
 def get_args():
-	parser = argparse.ArgumentParser(description="Inference script for 3D cell classifier")
+	# Load the description from the file
+	desc_file_path = pkg_resources.resource_filename(__name__, 'desc.txt')
+	desc = load_description_from_file(desc_file_path)
+	parser = argparse.ArgumentParser(description=desc)
 
 	parser.add_argument(
 		'-v', '--verbose',
@@ -244,7 +264,8 @@ def tracking(features, images, pipeline):
 				with open(output_file, 'w') as f:
 					f.write(res_xml)
 
-def main(args):
+def main():
+	args = get_args()
 	pipeline_file = args.pipeline
 
 	with open(pipeline_file, 'r') as f:
@@ -310,5 +331,4 @@ def main(args):
 		images, labels, features, networks = post_processing(images, labels, features, networks, pipeline)
 
 if __name__ == "__main__":
-	args = get_args()
-	main(args)
+	main()
