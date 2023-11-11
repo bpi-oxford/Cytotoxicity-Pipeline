@@ -17,7 +17,7 @@ For individual steps check the table for input-output dictionary key-pairs:
 | Segmentation  | "image"/"label"     | "label"             |
 | Detection     | "image"/"label"     | "dataframe"         |
 | Tracking      | "dataframe"         | "dataframe"         |
-| Analysis      | "dataframe"         | arbitrary           |
+| Analysis      | "image"/"label"/"dataframe"         | arbitrary           |
 
 For short, following the template class for the modular workflow:
 
