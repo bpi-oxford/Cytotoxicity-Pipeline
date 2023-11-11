@@ -5,6 +5,7 @@ import dask.array as da
 import tensorflow as tf
 import numpy as np
 from csbdeep.utils import normalize
+import gc
 
 class StarDist(object):
     def __init__(self,model_name="2D_versatile_fluo", prob_thresh=0.479071, nms_thresh=0.3, verbose=True) -> None:
@@ -48,5 +49,9 @@ class StarDist(object):
             label_, _ = model.predict_instances(img,prob_thresh=self.prob_thresh,nms_thresh=self.nms_thresh)
             label[:,:,t] = label_
         label = label.astype(np.uint16)
+
+        # collect memeory garbage manually
+        # gc.collect()
+        tf.keras.backend.clear_session()
         
         return {"image": image, "label": label}

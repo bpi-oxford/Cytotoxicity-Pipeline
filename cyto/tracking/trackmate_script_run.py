@@ -1,3 +1,7 @@
+#@ Float (label="Linking max distance", description="The max distance between two consecutive spots, in physical units, allowed for creating links.", min=1, value=15.0) LINKING_MAX_DISTANCE
+#@ int (label="Max frame gap", description="Gap-closing time-distance. The max difference in time-points between two spots to allow for linking. For instance a value of 2 means that the tracker will be able to make a link between a spot in frame t and a successor spots in frame t+2, effectively bridging over one missed detection in one frame.", min=0, value=5) MAX_FRAME_GAP
+#@ Float (label="gap closing distance", description="Gap-closing max spatial distance. The max distance between two spots, in physical units, allowed for creating links over missing detections.", min=1, value=15.0) GAP_CLOSING_MAX_DISTANCE
+
 import sys
  
 from ij import IJ
@@ -18,10 +22,16 @@ import fiji.plugin.trackmate.features.FeatureFilter as FeatureFilter
 from java.io import File
 
 import csv
+import os
 
-IMAGE_PATH = "C:/Users/vpfannenstill/Documents/OneDrive - Nexus365/Cytotoxicity/Data_Ka_Sam/1To2CancerToTcell_ratio_ROI/Segmentation/TCell.tif"
-XML_PATH = "C:/Users/vpfannenstill/Documents/OneDrive - Nexus365/Cytotoxicity/Data_Ka_Sam/1To2CancerToTcell_ratio_ROI/Segmentation/trackmate.xml"
-OUT_CSV_PATH = "C:/Users/vpfannenstill/Documents/OneDrive - Nexus365/Cytotoxicity/Data_Ka_Sam/1To2CancerToTcell_ratio_ROI/Segmentation/trackmate.csv"
+IMAGE_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif"
+XML_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml"
+OUT_CSV_DIR = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/params"
+try:
+    os.makedirs(OUT_CSV_DIR)
+except OSError as e:
+    print(e)
+OUT_CSV_PATH = os.path.join(OUT_CSV_DIR,"trackmate_linkDist-{}_frameGap-{}_gapCloseDist-{}.csv".format(LINKING_MAX_DISTANCE,MAX_FRAME_GAP,GAP_CLOSING_MAX_DISTANCE))
  
 # We have to do the following to avoid errors with UTF8 chars generated in 
 # TrackMate that will mess with our Fiji Jython.
@@ -83,10 +93,11 @@ settings.detectorFactory = ManualDetectorFactory()
 # Configure tracker - We want to allow merges and fusions
 settings.trackerFactory = SimpleSparseLAPTrackerFactory()
 settings.trackerSettings = settings.trackerFactory.getDefaultSettings() # almost good enough
-settings.trackerSettings['LINKING_MAX_DISTANCE'] = 15.0
-settings.trackerSettings['MAX_FRAME_GAP'] = 5
-settings.trackerSettings['GAP_CLOSING_MAX_DISTANCE'] = 15.0
+settings.trackerSettings['LINKING_MAX_DISTANCE'] = LINKING_MAX_DISTANCE
+settings.trackerSettings['MAX_FRAME_GAP'] = MAX_FRAME_GAP
+settings.trackerSettings['GAP_CLOSING_MAX_DISTANCE'] = GAP_CLOSING_MAX_DISTANCE
 
+# settings.trackerFactory = OverlapTrackerFactory()
  
 # Add ALL the feature analyzers known to TrackMate. They will 
 # yield numerical features for the results, such as speed, mean intensity etc.
@@ -128,9 +139,9 @@ selectionModel = SelectionModel( model )
 # Read the default display settings.
 ds = DisplaySettingsIO.readUserDefault()
  
-displayer =  HyperStackDisplayer( model, selectionModel, imp, ds )
-displayer.render()
-displayer.refresh()
+# displayer =  HyperStackDisplayer( model, selectionModel, imp, ds )
+# displayer.render()
+# displayer.refresh()
  
 # Echo results with the logger we set at start:
 model.getLogger().log( str( model ) )

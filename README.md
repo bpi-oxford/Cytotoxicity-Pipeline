@@ -18,7 +18,7 @@ Users may provide a YAML script for a quick configuration of the analysis pipeli
   - [x] Intensity normalization
   - [ ] Pixel size normalization
   - [x] Channel merge
-  - [ ] Cross channel pixel correlation
+  - [x] Cross channel pixel correlation
 
 - Segmentation
   

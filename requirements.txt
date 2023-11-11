@@ -10,3 +10,4 @@ bokeh
 pytest
 scikit-learn
 opencv-python
+cellpose

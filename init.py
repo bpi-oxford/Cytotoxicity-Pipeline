@@ -73,3 +73,4 @@ def pyimagej_init(FIJI_DIR=""):
     print("Initializing Fiji on JVM...")
     ij = imagej.init(FIJI_DIR,mode='headless')
     print(ij.getApp().getInfo(True))
+    return ij
