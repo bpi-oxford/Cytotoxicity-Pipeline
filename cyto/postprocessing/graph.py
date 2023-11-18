@@ -12,6 +12,8 @@ import networkx as nx
 import SimpleITK as sitk
 import multiprocessing
 import dask.array as da
+from pathos.threading import ThreadPool
+import time
 
 class CellTriangulation(object):
     def __init__(self, base_image=True, verbose=True) -> None:
@@ -122,8 +124,9 @@ class CrossCellContactMeasures(object):
         self.base_image = base_image
         self.threads = threads
         self.verbose = verbose
-    
-    def run_single_frame(label_0, label_1, centroids_0,centroids_1, features_0, features_1, frame):
+        self.lock = multiprocessing.Lock()
+
+    def run_single_frame(self,label_0, label_1, centroids_0,centroids_1, features_0, features_1,frame):
         """
         Single frame process run
 
@@ -137,9 +140,10 @@ class CrossCellContactMeasures(object):
             frame (int): Frame number to async parallel processing positioning.
         """
         # get number of centroids in each cell type
-        c_count = [len(centroids_0),len(centroids_1)]
+        c_count = [centroids_0.shape[1],centroids_1.shape[1]]
 
         # generate distance matrix on gpu
+        start_time = time.time()
         distance_matrix_device = cle.generate_distance_matrix(centroids_0, centroids_1)
 
         # relabel the input
@@ -157,13 +161,18 @@ class CrossCellContactMeasures(object):
         statFilter_1 = sitk.LabelShapeStatisticsImageFilter()
         statFilter_1.Execute(label_sitk_1)
 
+        end_time = time.time()
+        # Calculate elapsed time
+        elapsed_time = end_time - start_time
+
         overlap_matrix_device = cle.generate_binary_overlap_matrix(label_0, label_1)
 
         masked_distance_matrix = cle.multiply_images(overlap_matrix_device,distance_matrix_device)
 
         pointlist = np.concatenate([centroids_0,centroids_1],axis=1)
         distance_matrix_pivot = np.zeros((c_count[0]+c_count[1]+1,c_count[0]+c_count[1]+1))
-        distance_matrix_pivot[(centroids_0.shape[1]+1):,1:(centroids_1.shape[1]+1)] = masked_distance_matrix[1:,1:]
+
+        distance_matrix_pivot[(centroids_0.shape[1]+1):,1:(centroids_0.shape[1]+1)] = masked_distance_matrix[1:,1:]
         distance_matrix_pivot[1:(centroids_0.shape[1]+1),(centroids_0.shape[1]+1):] = masked_distance_matrix[1:,1:].T
 
         distance_matrix_pivot = cle.push(distance_matrix_pivot)
@@ -203,6 +212,9 @@ class CrossCellContactMeasures(object):
             contact_label.append(np.where(overlap == 1)[0]+cell_label_offset+1) # cell label starts from 1 so need to offset extra 1
             closest_cell_dist.append(np.min(dist))
 
+        # Print the elapsed time
+        tqdm.write("Frame {} contact analysis elapsed time: {}s".format(frame,elapsed_time))
+
         return {"graph":graph, "network_image": distance_mesh_host, "frame": frame, "contact": contact, "contact_label": contact_label, "closest_cell_dist": closest_cell_dist}
 
     def __call__(self, data) -> Any:
@@ -235,17 +247,17 @@ class CrossCellContactMeasures(object):
                 distance_matrix_device = cle.generate_distance_matrix(c[0], c[1])
 
                 relabelFilter = sitk.RelabelComponentImageFilter()
-                labels_ = relabelFilter.Execute(sitk.GetImageFromArray(labels[0][:,:,CUR_FRAME]))
-                labels[0][:,:,CUR_FRAME] = sitk.GetArrayFromImage(labels_)
+                labels0_ = relabelFilter.Execute(sitk.GetImageFromArray(labels[0][:,:,CUR_FRAME]))
+                labels[0][:,:,CUR_FRAME] = sitk.GetArrayFromImage(labels0_)
 
-                labels_ = relabelFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
-                labels[1][:,:,CUR_FRAME] = sitk.GetArrayFromImage(labels_)
-
-                statFilter = sitk.LabelShapeStatisticsImageFilter()
-                statFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
+                labels1_ = relabelFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
+                labels[1][:,:,CUR_FRAME] = sitk.GetArrayFromImage(labels1_)
 
                 statFilter = sitk.LabelShapeStatisticsImageFilter()
-                statFilter.Execute(sitk.GetImageFromArray(labels[1][:,:,CUR_FRAME]))
+                statFilter.Execute(labels0_)
+
+                statFilter = sitk.LabelShapeStatisticsImageFilter()
+                statFilter.Execute(labels1_)
 
                 overlap_matrix_device = cle.generate_binary_overlap_matrix(labels[0][:,:,CUR_FRAME], labels[1][:,:,CUR_FRAME])
 
@@ -295,55 +307,52 @@ class CrossCellContactMeasures(object):
                     contact_label.append(np.where(overlap == 1)[0]+cell_label_offset+1) # cell label starts from 1 so need to offset extra 1
                     closest_cell_dist.append(np.min(dist))
         else:
-            # create multiprocessing pool
-            pool = multiprocessing.Pool(processes=self.threads)
-
-            pbar = tqdm(range(START_FRAME,END_FRAME+1),desc="Cross cell contact measurements (parallel)")
-
+            # outputs
             network_image = da.zeros_like(labels[0])
-
             # initiate dicts for unsorted results
             graph_ = {}
             contact_ = {}
             contact_label_ = {}
             closest_cell_dist_ = {}
 
-            for CUR_FRAME in pbar:
-                c = []
-                c_count = []
-                labels_np = []
-                # loop over the two label images
-                for i, label in enumerate(labels):
-                    centroids = features[i][features[i].frame==CUR_FRAME][["i","j"]].to_numpy().T
-                    c.append(centroids)
-                    c_count.append(centroids.shape[1])
-                    labels_np.append(label[:,:,CUR_FRAME].compute())
+            def run_single_frame_helper(input_dict):
+                return self.run_single_frame(**input_dict)
 
-                def callback(res):
-                    pbar.update(1)
+            input_dict_list = []
 
-                    frame = res["frame"]
+            # TODO: expected to have large memory usage, chuck processing required
 
-                    # network image
-                    network_image_ = res["network_image"]
-                    network_image[:,:,frame] = network_image_
+            pbar_0 = tqdm(range(START_FRAME,END_FRAME+1),desc="Preparing data for cross cell contact measurements") 
+            for CUR_FRAME in pbar_0:
+                input_dict_list.append({
+                    "frame": CUR_FRAME,
+                    "label_0": labels[0][:,:,CUR_FRAME],
+                    "label_1": labels[1][:,:,CUR_FRAME],
+                    "centroids_0": features[0][features[0].frame==CUR_FRAME][["i","j"]].to_numpy().T,
+                    "centroids_1": features[1][features[1].frame==CUR_FRAME][["i","j"]].to_numpy().T,
+                    "features_0": features[0],
+                    "features_1": features[1],
+                })
 
-                    # graph
-                    graph_[frame: res["graph"]]
+            pool = ThreadPool(self.threads)
+            pbar_1 = tqdm(total=END_FRAME-START_FRAME+1,desc="Cross cell contact measurements (parallel)")
+            def callback(res):
+                print("hello")
+                print(type(res))
+                print(len(res))
+                pbar_1.update(len(res))
+                # network image missing
 
-                    # contact
-                    contact_[frame: res["contact"]]
+                # graph_[res["frame"]] = res["graph"]
+                # contact_[res["frame"]] = res["contact"]
+                # contact_label_[res["frame"]] = res["contact_label"]
+                # closest_cell_dist_[res["frame"]] = res["closest_cell_dist"]
+                print("pbar should be updated")
 
-                    # contact label
-                    contact_label_[frame: res["contact_label"]]
+            def error_callback(err):
+                print(err)
 
-                    # closest cell dist
-                    closest_cell_dist_[frame: res["closest_cell_dist"]]
-
-                def err_callback(err):
-                    print(err)
-
-                pool.apply_async(self.run_single_frame,(labels_np[0],labels_np[1],c[0],c[1],features[0],features[1],CUR_FRAME,),callback=callback,error_callback=err_callback)
+            pool.amap(run_single_frame_helper,input_dict_list,callback=callback, error_callback=error_callback)
             
             # close pool and wait to finish
             pool.close()
@@ -353,10 +362,12 @@ class CrossCellContactMeasures(object):
             graph = dict(sorted(graph_.items())).values()
             for c in dict(sorted(contact_.items())).values():
                 contact.extend(c)
-            for c in dict(sorted(contact_label_)).values():
+            for c in dict(sorted(contact_label_.items())).values():
                 contact_label.extend(c)
-            for c in dict(sorted(closest_cell_dist_)).values():
+            for c in dict(sorted(closest_cell_dist_.items())).values():
                 closest_cell_dist.extend(c)
+
+            pbar_1.close()
 
         features_out["contact"] = contact
         features_out["contacting cell labels"] = contact_label
