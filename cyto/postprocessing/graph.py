@@ -14,6 +14,7 @@ import multiprocessing
 import dask.array as da
 from pathos.threading import ThreadPool
 import time
+import pickle
 from datetime import datetime
 
 class CellTriangulation(object):
@@ -325,21 +326,53 @@ class CrossCellContactMeasures(object):
         while True:
             if self.verbose:
                 print("{}: Calling mpi worker function at rank {}".format(datetime.now(),mpi_comm.Get_rank()))
-            data = mpi_comm.recv(source=0,tag=self.MPI_TAGS["TASK"]) # blocking for immediate consumption of data
-            if data is None:
+
+            # Receive the serialized data
+            data_serialized = mpi_comm.recv(source=0)
+
+            # data = mpi_comm.recv(source=0,tag=self.MPI_TAGS["TASK"]) # blocking for immediate consumption of data
+            if data_serialized is None:
                 print('{}: Rank {} cycle finish'.format(datetime.now(),mpi_comm.Get_rank()))
                 return
+            
+            # Deserialize the data
+            data = {}
+            label_shape = np.frombuffer(data_serialized["label_shape"], dtype=np.uint16)
+
+            for key, value in data_serialized.items():
+                if key in ["label_0", "label_1"]:
+                    data[key] = np.frombuffer(value, dtype=np.uint16).reshape(label_shape)
+                elif key in ["label_shape"]:
+                    data[key] = np.frombuffer(value, dtype=np.uint16)
+                elif key in ["features_0", "features_1"]:
+                    print(key)
+                    data[key] = pd.read_pickle(pd.io.common.BytesIO(value))
+                else:
+                    print(key)
+                    data[key] = pickle.loads(value)
+                    
+            if self.verbose:
+                print('{}: Rank {} received data @frame {}'.format(datetime.now(),mpi_comm.Get_rank(),data["frame"]))
+           
+            # unpack the income data
+            frame = data["frame"]
+            label_0 = data["label_0"]
+            label_1 = data["label_1"]
+            centroids_0 = data["centroids_0"]
+            centroids_1 = data["centroids_1"]
+            features_0 = data["features_0"]
+            features_1 = data["features_1"]
+
+            print(features_0.columns)
 
             if self.verbose:
-                print('{}: Rank {} received data: {}'.format(datetime.now(),mpi_comm.Get_rank(),data))
-            # mimic some time consuming duty here
-            time.sleep(3)
-
-            if self.verbose:
-                print('{}: Rank {} finished data: {}'.format(datetime.now(),mpi_comm.Get_rank(),data))
+                print('{}: Rank {} finished data @frame: {}'.format(datetime.now(),mpi_comm.Get_rank(),frame))
 
             # send finished data back to main process, non blocking for quick receiving for new data, send data will be in the MPI buffer
-            mpi_comm.isend(data,dest=0,tag=self.MPI_TAGS["RESULT"])
+            res = {
+                "frame": frame
+            }
+            mpi_comm.isend(res,dest=0,tag=self.MPI_TAGS["RESULT"])
 
     def __call__(self, data) -> Any:
         if self.parallel_backend != "MPI":
@@ -524,14 +557,51 @@ class CrossCellContactMeasures(object):
             # Call the appropriate worker function, based on our rank. Here we use point to point communication with rank 0 as the master program
             if mpi_rank == 0:
                 # prepare data for the child process
-                data = np.arange(10)
+                images = data["images"]
+                labels = data["labels"]
+                features = data["features"]
+                assert len(images) == 2, "Input images must be 2"
+                assert len(features) == 2, "Input features must be 2"
+                START_FRAME = features[0].frame.min()
+                END_FRAME = features[0].frame.max()
+                features_out = features[0].copy()
+
+                # TODO: expected to have large memory usage, chuck processing may be required
+                input_dict_list = []
+
+                pbar_0 = tqdm(range(START_FRAME,END_FRAME+1),desc="Preparing data for cross cell contact measurements") 
+                for CUR_FRAME in pbar_0:
+                    label_0 = labels[0][:,:,CUR_FRAME].compute()
+                    label_1 = labels[1][:,:,CUR_FRAME].compute()
+
+                    input_dict_list.append({
+                        "frame": CUR_FRAME,
+                        "label_shape": np.asarray(label_0.shape).astype(np.uint16),
+                        "label_0": label_0,
+                        "label_1": label_1,
+                        "centroids_0": features[0][features[0].frame==CUR_FRAME][["i","j"]].to_numpy().T,
+                        "centroids_1": features[1][features[1].frame==CUR_FRAME][["i","j"]].to_numpy().T,
+                        "features_0": pd.DataFrame.copy(features[0]),
+                        "features_1": pd.DataFrame.copy(features[1]),
+                    })
 
                 # main program sent dictionary to to child workers
-                for i, x in enumerate(data):
+                for i, x in enumerate(input_dict_list):
                     worker_rank = i%(mpi_size-1)+1
                     if self.verbose:
                         print('{}: Job {} sent data to child rank {}'.format(datetime.now(), i, worker_rank))
-                    mpi_comm.isend(x, dest=worker_rank, tag=self.MPI_TAGS["TASK"]) # send data to child process
+
+                    # Serialize the dictionary
+                    data_serialized = {}
+                    for key, value in x.items():
+                        if key in ["label_0", "label_1", "label_shape"]:
+                            data_serialized[key] = value.tobytes()
+                        else:
+                            data_serialized[key] = pickle.dumps(value)
+
+                    # Send the size of the serialized data
+                    mpi_comm.isend(data_serialized, dest=worker_rank, tag=self.MPI_TAGS["TASK"])
+                    # mpi_comm.isend(x, dest=worker_rank, tag=self.MPI_TAGS["TASK"]) # send data to child process
 
                 # send finish signal to child workers
                 for i in range(mpi_size-1):
@@ -541,19 +611,24 @@ class CrossCellContactMeasures(object):
                     mpi_comm.send(None, dest=worker_rank, tag=self.MPI_TAGS["TASK"]) # send data to child process, blocking to avoid early kill of workers
 
                 # retrieve results from child processes
+                graph = []
+                network_image = None
+                contact = []
+                contact_label = []
+                closest_cell_dist = []
+
                 for i in tqdm(range(len(data)),desc="MPI master data receive progress"):
                     status = MPI.Status()
-                    result = mpi_comm.recv(source=MPI.ANY_SOURCE, tag=self.MPI_TAGS["RESULT"], status=status) # gather result here, blocking for immediate consumption
+                    result = mpi_comm.recv(source=MPI.ANY_SOURCE, tag=self.MPI_TAGS["RESULT"], status=status) # gather result here, blocking for immediate consumption, may need optimization
                     source = status.Get_source()
 
                     # do something slow here
-                    time.sleep(1)
-
+                    time.sleep(0.5)
 
                     if self.verbose:
-                        print("{}: Master received results from rank {}: {}".format(datetime.now(), source, result))
+                        tqdm.write("{}: Master received results from rank {}: {}".format(datetime.now(), source, result["frame"]))
                 if self.verbose:
-                    print("End of MPI loop")
+                    print("End of MPI master loop")
 
             # end_time = time.time()
             # Calculate elapsed time
