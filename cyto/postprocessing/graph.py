@@ -312,9 +312,11 @@ class CrossCellContactMeasures(object):
             # data = mpi_comm.recv(source=0,tag=self.MPI_TAGS["TASK"]) # blocking for immediate consumption of data
             if data_serialized is None:
                 # wait all process to finish
-                for req in tqdm(req_list):
+                for req in req_list:
                     req.wait()
-                print('{}: Rank {} cycle finish'.format(datetime.now(),mpi_comm.Get_rank()))
+                
+                if self.verbose:
+                    print('{}: Rank {} cycle finish'.format(datetime.now(),mpi_comm.Get_rank()))
                 return
             
             # Deserialize the data
