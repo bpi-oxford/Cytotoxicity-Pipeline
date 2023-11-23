@@ -120,17 +120,15 @@ class CrossCellContactMeasures(object):
         "RESULT": 1,
     }
 
-    def __init__(self, base_image=True, threads=1, parallel_backend="NATIVE", verbose=True) -> None:
+    def __init__(self, threads=1, parallel_backend="NATIVE", verbose=True) -> None:
         """
         Perform cross cell type contact measurements
         
         Args:
-            base_image (bool): Plot the cell networks with base image
             threads (int): Number of threads for parallel processing (default=1). Setting the thread number to high value may overflow system memory. Will be overrided by MPI rank size if use MPI backend.
             parallel_backend (str): Parallelization backend, note pyclespranto only work with MPI at this moment (default = "NATIVE")["MPI","NATIVE","PATHOS"]
             verbose (bool): Turn on or off the processing printout
         """
-        self.base_image = base_image
         self.threads = threads
         self.parallel_backend = parallel_backend
         self.verbose = verbose
@@ -157,28 +155,9 @@ class CrossCellContactMeasures(object):
         # get number of centroids in each cell type
         c_count = [centroids_0.shape[1],centroids_1.shape[1]]
         if self.verbose:
-            tqdm.write("{} x {}".format(c_count[0], c_count[1]))
+            tqdm.write("Distance matrix scale: {} x {}".format(c_count[0], c_count[1]))
 
         # generate distance matrix on gpu
-        if self.verbose:
-            current_time = datetime.now()
-
-            # Format and print the current time
-            formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
-            tqdm.write("@frame {} push to gpu start time: {}".format(frame, formatted_time))
-
-        # start_time = time.time()
-        # centroids_0_cle = cle.push(centroids_0)
-        # centroids_1_cle = cle.push(centroids_1)
-
-        # if self.verbose:
-        #     end_time = time.time()
-        #     # Calculate elapsed time
-        #     elapsed_time = end_time - start_time
-
-        #     # Print the elapsed time
-        #     tqdm.write("@frame {}: centroids push to gpu elapsed time for thread count = {}: {:.4f}s".format(frame,str(self.threads),elapsed_time))
-
         start_time = time.time()
         distance_matrix_device = cle.generate_distance_matrix(centroids_0, centroids_1)
 
@@ -309,7 +288,6 @@ class CrossCellContactMeasures(object):
             "contact": contact, 
             "contact_label": contact_label, 
             "closest_cell_dist": closest_cell_dist,
-            "starttime": start_time_0,
             }
     
     def mpi_worker(self):
@@ -323,6 +301,7 @@ class CrossCellContactMeasures(object):
         if self.verbose:
             print("{}: Staring mpi worker function at rank {}".format(datetime.now(),mpi_rank))
 
+        req_list = []
         while True:
             if self.verbose:
                 print("{}: Calling mpi worker function at rank {}".format(datetime.now(),mpi_comm.Get_rank()))
@@ -332,29 +311,37 @@ class CrossCellContactMeasures(object):
 
             # data = mpi_comm.recv(source=0,tag=self.MPI_TAGS["TASK"]) # blocking for immediate consumption of data
             if data_serialized is None:
+                # wait all process to finish
+                for req in tqdm(req_list):
+                    req.wait()
                 print('{}: Rank {} cycle finish'.format(datetime.now(),mpi_comm.Get_rank()))
                 return
             
             # Deserialize the data
             data = {}
-            label_shape = np.frombuffer(data_serialized["label_shape"], dtype=np.uint16)
+            if "label_shape" in data_serialized.keys():
+                label_shape = np.frombuffer(data_serialized["label_shape"], dtype=np.uint16)
 
             for key, value in data_serialized.items():
-                if key in ["label_0", "label_1"]:
+                if key in ["frame"]:
+                    # unserialized data
+                    data[key] = value
+                elif key in ["label_0", "label_1"]:
+                    # numpy data need to be reshape
                     data[key] = np.frombuffer(value, dtype=np.uint16).reshape(label_shape)
                 elif key in ["label_shape"]:
+                    # numpy data no need to reshape
                     data[key] = np.frombuffer(value, dtype=np.uint16)
                 elif key in ["features_0", "features_1"]:
-                    print(key)
-                    data[key] = pd.read_pickle(pd.io.common.BytesIO(value))
+                    # convert dict back to pandas df
+                    data[key] = pd.DataFrame.from_dict(value)
                 else:
-                    print(key)
                     data[key] = pickle.loads(value)
                     
             if self.verbose:
-                print('{}: Rank {} received data @frame {}'.format(datetime.now(),mpi_comm.Get_rank(),data["frame"]))
+                print('{}: Rank {} deserialized data @frame {}'.format(datetime.now(),mpi_comm.Get_rank(),data["frame"]))
            
-            # unpack the income data
+            # unpack the income data to single thread worker
             frame = data["frame"]
             label_0 = data["label_0"]
             label_1 = data["label_1"]
@@ -363,23 +350,45 @@ class CrossCellContactMeasures(object):
             features_0 = data["features_0"]
             features_1 = data["features_1"]
 
-            print(features_0.columns)
+            # start processing the data
+            res = self.run_single_frame(
+                label_0=label_0,
+                label_1=label_1,
+                centroids_0=centroids_0,
+                centroids_1=centroids_1,
+                features_0=features_0,
+                features_1=features_1,
+                frame=frame
+            )
 
             if self.verbose:
                 print('{}: Rank {} finished data @frame: {}'.format(datetime.now(),mpi_comm.Get_rank(),frame))
 
             # send finished data back to main process, non blocking for quick receiving for new data, send data will be in the MPI buffer
-            res = {
-                "frame": frame
-            }
-            mpi_comm.isend(res,dest=0,tag=self.MPI_TAGS["RESULT"])
+            # serialize the data
+
+            res_serialized = {}
+            for key, value in res.items():
+                if key in ["graph"]:
+                    res_serialized[key] = pickle.dumps(value)
+                elif key in ["frame", "contact", "contact_label", "closest_cell_dist"]:
+                    res_serialized[key] = value
+                elif key in ["network_image"]:
+                    # numpy data
+                    res_serialized[key] = value.tobytes()
+                else:
+                    pass
+
+            if self.verbose:
+                print('{}: Rank {} sending data @frame: {}'.format(datetime.now(),mpi_comm.Get_rank(),frame))
+            req_list.append(mpi_comm.isend(res_serialized,dest=0,tag=self.MPI_TAGS["RESULT"]))
+            if self.verbose:
+                print('{}: Rank {} finished sending data @frame: {}'.format(datetime.now(),mpi_comm.Get_rank(),frame))
 
     def __call__(self, data) -> Any:
         if self.parallel_backend != "MPI":
-            images = data["images"]
             labels = data["labels"]
             features = data["features"]
-            assert len(images) == 2, "Input images must be 2"
             assert len(features) == 2, "Input features must be 2"
             START_FRAME = features[0].frame.min()
             END_FRAME = features[0].frame.max()
@@ -530,6 +539,7 @@ class CrossCellContactMeasures(object):
 
             return {"image": network_image, "feature": features_out, "network": graph}
         else:
+            start_time = time.time()
             from mpi4py import MPI
             # Get our MPI communicator, our rank, and the world size.
             mpi_comm = MPI.COMM_WORLD
@@ -581,11 +591,12 @@ class CrossCellContactMeasures(object):
                         "label_1": label_1,
                         "centroids_0": features[0][features[0].frame==CUR_FRAME][["i","j"]].to_numpy().T,
                         "centroids_1": features[1][features[1].frame==CUR_FRAME][["i","j"]].to_numpy().T,
-                        "features_0": pd.DataFrame.copy(features[0]),
-                        "features_1": pd.DataFrame.copy(features[1]),
+                        "features_0": features[0],
+                        "features_1": features[1],
                     })
 
                 # main program sent dictionary to to child workers
+                req_list = []
                 for i, x in enumerate(input_dict_list):
                     worker_rank = i%(mpi_size-1)+1
                     if self.verbose:
@@ -593,15 +604,22 @@ class CrossCellContactMeasures(object):
 
                     # Serialize the dictionary
                     data_serialized = {}
+
                     for key, value in x.items():
-                        if key in ["label_0", "label_1", "label_shape"]:
+                        if key in ["frame"]:
+                            # no need for serialization
+                            data_serialized[key] = value
+                        elif key in ["label_0", "label_1", "label_shape"]:
+                            # numpy data
                             data_serialized[key] = value.tobytes()
+                        elif key in ["features_0","features_1"]:
+                            # pandas table object
+                            data_serialized[key] = value.to_dict()
                         else:
                             data_serialized[key] = pickle.dumps(value)
 
                     # Send the size of the serialized data
-                    mpi_comm.isend(data_serialized, dest=worker_rank, tag=self.MPI_TAGS["TASK"])
-                    # mpi_comm.isend(x, dest=worker_rank, tag=self.MPI_TAGS["TASK"]) # send data to child process
+                    req_list.append(mpi_comm.isend(data_serialized, dest=worker_rank, tag=self.MPI_TAGS["TASK"]))
 
                 # send finish signal to child workers
                 for i in range(mpi_size-1):
@@ -612,28 +630,72 @@ class CrossCellContactMeasures(object):
 
                 # retrieve results from child processes
                 graph = []
-                network_image = None
+                network_image = np.zeros_like(labels[0])
                 contact = []
                 contact_label = []
                 closest_cell_dist = []
 
-                for i in tqdm(range(len(data)),desc="MPI master data receive progress"):
+                # helper dict to collect async results
+                graph_ = {}
+                contact_ = {}
+                contact_label_ = {}
+                closest_cell_dist_ = {}
+
+                if self.verbose:
+                    print("# of mpi send requests ",len(req_list))
+
+                for req in tqdm(req_list,desc="MPI master data receive progress"):
+                    req.wait()
                     status = MPI.Status()
-                    result = mpi_comm.recv(source=MPI.ANY_SOURCE, tag=self.MPI_TAGS["RESULT"], status=status) # gather result here, blocking for immediate consumption, may need optimization
+                    res_serialized = mpi_comm.recv(source=MPI.ANY_SOURCE, tag=self.MPI_TAGS["RESULT"], status=status) # gather result here, blocking for immediate consumption, may need optimization
                     source = status.Get_source()
 
-                    # do something slow here
-                    time.sleep(0.5)
-
                     if self.verbose:
-                        tqdm.write("{}: Master received results from rank {}: {}".format(datetime.now(), source, result["frame"]))
+                        tqdm.write("{}: Master received results from rank {}: {}".format(datetime.now(), source, res_serialized["frame"]))
+
+                    # deserialize the incoming data from workers
+                    res = {}
+                    for key, value in res_serialized.items():
+                        if key in ["graph"]:
+                            res[key] = pickle.loads(value)
+                        elif key in ["network_image"]:
+                            # numpy data need to be reshape
+                            res[key] = np.frombuffer(value, dtype=np.uint32).reshape(labels[0].shape[0:2])
+                        else:
+                            res[key] = value
+                    
+                    # concat all results
+                    # initiate dicts for unsorted results
+                    network_image[:,:,res["frame"]] = res["network_image"]
+                    graph_[res["frame"]] = res["graph"]
+                    contact_[res["frame"]] = res["contact"]
+                    contact_label_[res["frame"]] = res["contact_label"]
+                    closest_cell_dist_[res["frame"]] = res["closest_cell_dist"]
+
+                # reorder unsorted results
+                for g in dict(sorted(graph_.items())).values():
+                    graph.extend(g)
+                for c in dict(sorted(contact_.items())).values():
+                    contact.extend(c)
+                for c in dict(sorted(contact_label_.items())).values():
+                    contact_label.extend(c)
+                for c in dict(sorted(closest_cell_dist_.items())).values():
+                    closest_cell_dist.extend(c)
+
+                features_out["contact"] = contact
+                features_out["contacting cell labels"] = contact_label
+                features_out["closest cell dist"] = closest_cell_dist
+
                 if self.verbose:
                     print("End of MPI master loop")
 
-            # end_time = time.time()
-            # Calculate elapsed time
-            # elapsed_time = end_time - start_time
-            # Print the elapsed time
-            # tqdm.write("Contact analysis (exclude data concat) elapsed time for thread count = {}: {:.4f}s".format(str(self.threads),elapsed_time))
+                if self.verbose:
+                    end_time = time.time()
+                    # Calculate elapsed time
+                    elapsed_time = end_time - start_time
+                    # Print the elapsed time
+                    tqdm.write("Contact analysis (exclude data concat) elapsed time for mpi gpu worker rank count = {}: {:.4f}s".format(mpi_size-1,elapsed_time))
 
-            return
+                return {"image": network_image, "feature": features_out, "network": graph}
+            else:
+                return
