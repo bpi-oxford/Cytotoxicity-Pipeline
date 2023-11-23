@@ -114,7 +114,7 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
         "alive"
         ]
 
-    pbar = tqdm(total=label.shape[2])
+    pbar = tqdm(total=label.shape[2],desc="Label to sparse [{}]".format(channel_name))
 
     results = {}
     def collect_result(result):
@@ -158,7 +158,7 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
     data = pd.DataFrame(columns=columns)
     offset = 0
     data = []
-    for key in tqdm(sorted(results)):
+    for key in tqdm(sorted(results), desc="Label to sparse result collection [{}]".format(channel_name)):
         data_ = results[key]["data"]
         data_["label"] = data_['label'].apply(lambda x: x + offset)
         # data = merge_dicts(data,data_)
