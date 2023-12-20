@@ -44,7 +44,7 @@ class CellTriangulation(object):
             os.system("nvidia-smi --query-gpu=memory.used --format=csv")
             frame = image[:,:,CUR_FRAME]
             tail = 1
-            pl, pu = np.percentile(frame, (tail, 100-tail))
+            pl, pu = np.percentile(frame.ravel(), (tail, 100-tail))
 
             centroids = feature[feature.frame==CUR_FRAME][['i','j']].T.to_numpy()
 
