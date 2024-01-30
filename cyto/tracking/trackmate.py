@@ -7,9 +7,10 @@ import scyjava as sj
 from scyjava import jimport
 import imagej
 import imagej.doctor
+import pandas as pd
 
 class TrackMate(object):
-    def __init__(self, FIJI_DIR="", ij=None, linking_max_distance=15.0, max_frame_gap=5, gap_closing_max_distance=15.0, size_min=None, verbose=True) -> None:
+    def __init__(self, FIJI_DIR="", ij=None, linking_max_distance=15.0, max_frame_gap=5, gap_closing_max_distance=15.0, size_min=None, size_max=None, verbose=True) -> None:
         """
         Perform TrackMate tracking with pyimagej wrapping
 
@@ -24,6 +25,7 @@ class TrackMate(object):
                 bridging over one missed detection in one frame.
             gap_closing_max_distance (float): Gap-closing max spatial distance. The max distance between two spots, in physical units, allowed for creating links over missing detections.
             size_min (int): Minimum cell size to filter out small cells
+            size_max (int): Maximum cell size to filter out big cells
             verbose (bool): Turn on or off the processing printout
         """
         self.name = "TrackMate"
@@ -33,25 +35,29 @@ class TrackMate(object):
         self.max_frame_gap = max_frame_gap
         self.gap_closing_max_distance = gap_closing_max_distance
         self.size_min = size_min
+        self.size_max = size_max
         self.verbose = verbose
 
     def __call__(self, data, output=False) -> Any:
         image = data["image"]
-        features = data["feature"]
+        feature = data["feature"]
 
         if self.verbose:
             tqdm.write("Cell tracking with TrackMate")
 
         # filter by cell features
+        feature_filtered = feature
         if self.size_min is not None:
-            features = features[features["size"]>self.size_min]
+            feature_filtered = feature_filtered[feature["size"]>self.size_min]
+        if self.size_max is not None:
+            feature_filtered = feature_filtered[feature["size"]<self.size_max]
 
         # convert csv to trackmate xml
         # Create a temporary saved csv file
         temp_csv_file = tempfile.NamedTemporaryFile(suffix=".csv", mode="w", delete=False)
         temp_img_file = tempfile.NamedTemporaryFile(suffix=".tiff", mode="w", delete=False)
         temp_xml_file = tempfile.NamedTemporaryFile(suffix=".xml", mode="w", delete=False)
-        features.to_csv(temp_csv_file.name, index=False)
+        feature_filtered.to_csv(temp_csv_file.name, index=False)
 
         OmeTiffWriter.save(image.T, temp_img_file.name, dim_order="TYX")
 
@@ -62,15 +68,15 @@ class TrackMate(object):
             "--csvFilePath={}".format(temp_csv_file.name),
             "--imageFilePath={}".format(temp_img_file.name),
             "--radius=2.5",
-            "--xCol={}".format(list(features.columns).index("j")),
-            "--yCol={}".format(list(features.columns).index("i")),  
-            "--frameCol={}".format(list(features.columns).index("frame")),
-            "--idCol={}".format(list(features.columns).index("label")),
-            "--nameCol={}".format(list(features.columns).index("cell_type")),
-            "--radiusCol={}".format(list(features.columns).index("feret_radius")),
-            # "--targetFilePath={}".format(temp_xml_file.name),
+            "--xCol={}".format(list(feature_filtered.columns).index("j")),
+            "--yCol={}".format(list(feature_filtered.columns).index("i")),  
+            "--frameCol={}".format(list(feature_filtered.columns).index("frame")),
+            "--idCol={}".format(list(feature_filtered.columns).index("label")),
+            "--nameCol={}".format(list(feature_filtered.columns).index("channel")),
+            "--radiusCol={}".format(list(feature_filtered.columns).index("feret_radius")),
+            "--targetFilePath={}".format(temp_xml_file.name),
             # "--targetFilePath={}".format("/app/cytotoxicity-pipeline/output/tracking/trackmate.xml")
-            "--targetFilePath={}".format("/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml")
+            # "--targetFilePath={}".format("/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml")
         ])
 
         os.system(conversion_command)
@@ -101,45 +107,64 @@ class TrackMate(object):
         jfile = File(os.path.join(CWD,'trackmate_script_run.py'))
 
         # convert python side stuffs to java side
+        temp_out_dir = tempfile.TemporaryDirectory()
         # define python side arguments
         args = {
             'LINKING_MAX_DISTANCE': self.linking_max_distance, 
             'MAX_FRAME_GAP': self.max_frame_gap,
-            'GAP_CLOSING_MAX_DISTANCE': self.gap_closing_max_distance
+            'GAP_CLOSING_MAX_DISTANCE': self.gap_closing_max_distance,
+            'IMAGE_PATH': temp_img_file.name,
+            'XML_PATH': temp_xml_file.name,
+            'OUT_CSV_DIR': temp_out_dir.name,
         }
 
         jargs = self.ij.py.jargs(args)
         print("Running Trackmate...")
         result_future = self.ij.script().run(jfile,True,jargs)
 
-        # # get the result from java future, blocking will occur here
-        # result = result_future.get()
+        # get the result from java future, blocking will occur here
+        result = result_future.get()
         # if not headless:
         #     input("Press Enter to continue...")
         # print(ij.py.from_java(result.getOutput("foo")))
         # print(ij.py.from_java(result.getOutput("bar")))
         # print(ij.py.from_java(result.getOutput("shape")))
 
+        # pyimagej provides java table to dataframe interface passing: https://py.imagej.net/en/latest/07-Running-Macros-Scripts-and-Plugins.html#using-scripts-ij-py-run-script
+        # for quick development work around we use temporary csv saving for data consistency.
+
+        # read the tracked CSV file and remap back to the unfiltered file
+        OUT_CSV_PATH = os.path.join(temp_out_dir.name,"trackmate_linkDist-{}_frameGap-{}_gapCloseDist-{}.csv".format(self.linking_max_distance,self.max_frame_gap,self.gap_closing_max_distance))
+        
+        feature_tracked = pd.read_csv(OUT_CSV_PATH)
+
+        # Merge DataFrames using different columns
+        feature_out = pd.merge(feature, feature_tracked[['ID', 'TRACK_ID']], left_on='label', right_on='ID', how='left')
+        # Drop the redundant column
+        feature_out.drop('ID', axis=1, inplace=True)
+        # feature_out['TRACK_ID'].fillna(0, inplace=True)
+        feature_out = feature_out.rename(columns={"TRACK_ID": "TrackID"})
+
         if output:
             # Reading the data inside the xml
             # file to a variable under the name
             # data
             with open(temp_xml_file.name, 'r') as f:
-                data = f.read()
+                res_xml = f.read()
 
             # Close the temporary files
             temp_csv_file.close()
             temp_img_file.close()
             temp_xml_file.close()
 
-            return features, data
+            return feature_out, res_xml
         else:
             # Close the temporary files
             temp_csv_file.close()
             temp_img_file.close()
             temp_xml_file.close()
 
-            return features, None
+            return feature_out, None
 
 def main():
     from aicsimageio import AICSImage

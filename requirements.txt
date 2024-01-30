@@ -11,3 +11,5 @@ pytest
 scikit-learn
 opencv-python
 cellpose
+pathos
+mpi4py

@@ -3,6 +3,7 @@ from tqdm import tqdm
 from skimage import exposure
 import dask.array as da
 import numpy as np
+from tqdm import tqdm
 
 class PercentileNormalization(object):
     def __init__(self,lp=5,up=95, verbose=True) -> None:
@@ -27,7 +28,14 @@ class PercentileNormalization(object):
             tqdm.write("Percentile normalization: [{},{}]".format(self.lp,self.up))
 
         # normalization across time
-        in_range = (da.percentile(image.flatten(),self.lp).compute()[0],da.percentile(image.flatten(),self.up).compute()[0])
+        in_range = (da.percentile(image.ravel(),self.lp).compute()[0],da.percentile(image.ravel(),self.up).compute()[0])
+
+        # lp_list = []
+        # up_list = []
+        # for t in range(image.shape[2],description="Percentile Normalization"):
+        #     lp_list.append(da.percentile(image[:,:,t].ravel(),self.lp).compute()[0])
+        #     up_list.append(np.percentile(image[:,:,t].ravel(),self.up).compute()[0])
+        # in_range = (np.mean(lp_list),np.mean(up_list))
 
         image = exposure.rescale_intensity(
             image,
