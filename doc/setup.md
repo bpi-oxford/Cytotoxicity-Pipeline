@@ -41,6 +41,12 @@ python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'
 python3 -c "import tensorflow as tf; input_shape = (4, 28, 28, 3); x = tf.random.normal(input_shape); y = tf.keras.layers.Conv2D(2, 3, activation='relu', input_shape=input_shape[1:])(x); print(y.shape)"
 ```
 
+### OpenMPI
+#### Mac OS
+```bash
+brew install openmpi
+```
+
 ## Required Packages
 
 ```bash

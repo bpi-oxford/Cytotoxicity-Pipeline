@@ -2,7 +2,7 @@ dask
 distributed
 aicsimageio
 tqdm
-nvidia-cudnn-cu11==8.6.0.163 
+nvidia-cudnn-cu11==8.6.0.163; sys_platform != "darwin"
 tensorflow==2.12.*
 stardist
 SimpleITK

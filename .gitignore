@@ -166,3 +166,4 @@ cython_debug/
 output
 ?
 dask-scratch-space
+data
