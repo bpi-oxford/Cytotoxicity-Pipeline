@@ -1,6 +1,9 @@
 #@ Float (label="Linking max distance", description="The max distance between two consecutive spots, in physical units, allowed for creating links.", min=1, value=15.0) LINKING_MAX_DISTANCE
 #@ int (label="Max frame gap", description="Gap-closing time-distance. The max difference in time-points between two spots to allow for linking. For instance a value of 2 means that the tracker will be able to make a link between a spot in frame t and a successor spots in frame t+2, effectively bridging over one missed detection in one frame.", min=0, value=5) MAX_FRAME_GAP
-#@ Float (label="gap closing distance", description="Gap-closing max spatial distance. The max distance between two spots, in physical units, allowed for creating links over missing detections.", min=1, value=15.0) GAP_CLOSING_MAX_DISTANCE
+#@ Float (label="Gap closing distance", description="Gap-closing max spatial distance. The max distance between two spots, in physical units, allowed for creating links over missing detections.", min=1, value=15.0) GAP_CLOSING_MAX_DISTANCE
+#@ File (label="Image path", style="file") IMAGE_PATH
+#@ File (label="XML path", style="file") XML_PATH
+#@ File (label="Output CSV directory", style="directories") OUT_CSV_DIR
 
 import sys
  
@@ -24,14 +27,16 @@ from java.io import File
 import csv
 import os
 
-IMAGE_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif"
-XML_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml"
-OUT_CSV_DIR = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/params"
+# IMAGE_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/CancerCell.tif"
+# XML_PATH = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/trackmate.xml"
+# OUT_CSV_DIR = "/home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output/tracking/params"
+
 try:
-    os.makedirs(OUT_CSV_DIR)
+    if not os.path.exists(OUT_CSV_DIR.getPath()):
+        os.makedirs(OUT_CSV_DIR.getPath())
 except OSError as e:
     print(e)
-OUT_CSV_PATH = os.path.join(OUT_CSV_DIR,"trackmate_linkDist-{}_frameGap-{}_gapCloseDist-{}.csv".format(LINKING_MAX_DISTANCE,MAX_FRAME_GAP,GAP_CLOSING_MAX_DISTANCE))
+OUT_CSV_PATH = os.path.join(OUT_CSV_DIR.getPath(),"trackmate_linkDist-{}_frameGap-{}_gapCloseDist-{}.csv".format(LINKING_MAX_DISTANCE,MAX_FRAME_GAP,GAP_CLOSING_MAX_DISTANCE))
  
 # We have to do the following to avoid errors with UTF8 chars generated in 
 # TrackMate that will mess with our Fiji Jython.
@@ -46,8 +51,7 @@ sys.setdefaultencoding('utf-8')
 #----------------------------
 # Load Trackmate XML file
 #----------------------------
-file = File(XML_PATH) 
-reader = TmXmlReader(file)
+reader = TmXmlReader(XML_PATH)
 if not reader.isReadingOk():
     sys.exit(reader.getErrorMessage())
 

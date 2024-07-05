@@ -28,8 +28,8 @@ For Cellpose segmentation we recommend to use pyTorch 2.0.. Follow the instructi
 ### CUDA and CUDNN Versions
 ❗The conda environment file automatically choose the compatible version between Tensorflow and pyTorch under same CUDA (11.8) and CUDNN (8.6) settings. If you find CUDA or CUDNN version inconsistency by faulty loading the machine base CUDA libraries, use the following Conda virtual environment setting to override the system-wide paths:
 ```bash
-conda activate cyto
-conda install -c conda-forge cudatoolkit=11.8.0
+mamba activate cyto
+mamba install -c conda-forge cudatoolkit=11.8.0
 python3 -m pip install nvidia-cudnn-cu11==8.6.0.163
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
@@ -41,6 +41,12 @@ python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'
 python3 -c "import tensorflow as tf; input_shape = (4, 28, 28, 3); x = tf.random.normal(input_shape); y = tf.keras.layers.Conv2D(2, 3, activation='relu', input_shape=input_shape[1:])(x); print(y.shape)"
 ```
 
+### OpenMPI
+#### Mac OS
+```bash
+brew install openmpi
+```
+
 ## Required Packages
 
 ```bash
@@ -48,6 +54,11 @@ git clone git@github.com:bpi-oxford/Cytotoxicity-Pipeline.git
 cd Cytotoxicity-Pipeline
 pip install -r requirements.txt
 ```
+
+If error `x86_64-conda_cos6-linux-gnu-c++ command not found` appears during mpi4py installation you will need specific GCC compiler within conda environment:
+```bash
+mamba install gxx_linux-64
+``` 
 
 ## Fiji 
 Download Fiji and install TrackMateCSVImporter from CLI:

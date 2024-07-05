@@ -82,7 +82,7 @@ def merge_dicts(x,y):
     z.update(y)
     return z
 
-def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
+def label_to_sparse(label, image=None, spacing=[1,1],channel_name="",processes=1):
     # extracting the segment centroids
     columns = [
         "label",
@@ -128,8 +128,10 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
 
         pbar.update(1) # this is just for the fancy progress bar
 
-    # pool = Pool(processes=multiprocessing.cpu_count())
-    pool = Pool(processes=1)
+    def error_callback(err):
+        print(err)
+
+    pool = Pool(processes=processes)
     process_data = []
     results_iter = []
     for frame in range(label.shape[2]):
@@ -146,12 +148,12 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
             label_ = label_.compute()
         
         # for unknown reason multi threaded process get dead lock for certain process, unable to fix
-        # pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": celltype, "spacing": spacing}, callback=collect_result)
-        results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, channel=channel_name, spacing=spacing))
+        pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "channel": channel_name, "spacing": spacing}, callback=collect_result, error_callback=error_callback)
+        # results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, channel=channel_name, spacing=spacing))
     pool.close()
     pool.join()
 
-    [collect_result(result) for result in results_iter]
+    # [collect_result(result) for result in results_iter]
         
     # collect data to dictionary form
     # tqdm.write("Applying label number offset")

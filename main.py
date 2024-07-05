@@ -246,11 +246,17 @@ def tracking(features, images, pipeline):
 			output_dir = os.path.join(pipeline["output_dir"],"tracking")
 			# trackmate xml output
 			if res_xml:
-				output_file = os.path.join(output_dir,"{}.xml".format(ch))
+				output_xml_path = os.path.join(output_dir,"{}.xml".format(ch))
 				os.makedirs(output_dir,exist_ok=True)
-				tqdm.write("Exporting result: {}".format(output_file))
-				with open(output_file, 'w') as f:
+				tqdm.write("Exporting result: {}".format(output_xml_path))
+				with open(output_xml_path, 'w') as f:
 					f.write(res_xml)
+
+			# csv output
+			out_csv_path = os.path.join(output_dir, "{}.csv".format(ch))
+			features[ch].to_csv(out_csv_path)
+
+	return features
 
 def main():
 	args = get_args()
