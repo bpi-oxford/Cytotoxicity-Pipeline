@@ -114,11 +114,11 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
         "alive"
         ]
 
-    pbar = tqdm(total=label.shape[2])
+    # pbar = tqdm(total=label.shape[2])
 
     results = {}
     def collect_result(result):
-        # print("collecting data: {}".format(len(result[1])))
+        tqdm.write("collecting data: {}".format(len(result[1])))
         try:
             f = pd.DataFrame.from_dict(result[1],orient='index',columns=columns).sort_values(by=["label"])
 
@@ -126,13 +126,13 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
         except Exception as e:
             print(e)
 
-        pbar.update(1) # this is just for the fancy progress bar
+        # pbar.update(1) # this is just for the fancy progress bar
 
     # pool = Pool(processes=multiprocessing.cpu_count())
-    pool = Pool(processes=1)
+    # pool = Pool(processes=1)
     process_data = []
     results_iter = []
-    for frame in range(label.shape[2]):
+    for frame in tqdm(range(label.shape[2]),total=label.shape[2],desc="Extracing segment features"):
         if image is not None:
             image_ = image[:,:,frame]
         else:
@@ -145,11 +145,12 @@ def label_to_sparse(label, image=None, spacing=[1,1],channel_name=""):
         if isinstance(label_,da.Array):
             label_ = label_.compute()
         
+        # tqdm.write("world")
         # for unknown reason multi threaded process get dead lock for certain process, unable to fix
         # pool.apply_async(extract_segment_features, args=(image_,label_,frame), kwds={"relabel": True, "offset": 0, "cell_type": celltype, "spacing": spacing}, callback=collect_result)
         results_iter.append(extract_segment_features(image_,label_,frame, relabel=True, offset=0, channel=channel_name, spacing=spacing))
-    pool.close()
-    pool.join()
+    # pool.close()
+    # pool.join()
 
     [collect_result(result) for result in results_iter]
         
