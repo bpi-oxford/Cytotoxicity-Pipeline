@@ -5,6 +5,6 @@
 3. [Contact counting among different cell channels](./example_3.ipynb)
 4. [Cross channel correlation map](./example_4.ipynb)
 5. [Cell death signal](./example_5.ipynb)
-6. [Kiematics analysis](./example_6.ipynb)
+6. [Kinematics analysis](./example_6.ipynb)
 7. [Killing Vesicles Analysis](./example_7_EVs.ipynb)
 8. [Temporal UMAP](./example_8.ipynb)
