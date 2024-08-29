@@ -142,7 +142,7 @@ class CrossCellContactMeasures(object):
         Args:
             label_0 (arr): Numpy array label of first cell type
             label_1 (arr): Numpy array label of second cell type
-            cetnroids_0 (arr): Numpy array of centroid coordinates corresponding to label_0, in pixel space ij.
+            centroids_0 (arr): Numpy array of centroid coordinates corresponding to label_0, in pixel space ij.
             centroids_1 (arr): Numpy array of centroid coordinates corresponding to label_1, in pixel space ij.
             features_0 (Dataframe): Dataframe of spares cell info of first cell type
             features_1 (Dataframe): Dataframe of spares cell info of second cell type
