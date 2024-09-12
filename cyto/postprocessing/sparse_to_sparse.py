@@ -3,6 +3,8 @@ import pandas as pd
 from tqdm import tqdm
 import os
 import operator
+import numpy as np
+
 
 class CrossTableOperation(object):
     def __init__(self, column, operation, verbose=True):
@@ -64,3 +66,43 @@ class FeatureFilter(object):
         feature_out = feature[mask]
 
         return {"feature": feature_out}
+
+def intensity_norm(df,channel="mean",percentile=1):
+    lp = df[channel].quantile(percentile/100.)
+    up = df[channel].quantile(1-percentile/100.)
+
+    df["{}_norm".format(channel)] = df[channel].clip(lower=lp, upper=up)
+
+    df["{}_norm".format(channel)] = (df["{}_norm".format(channel)] - df["{}_norm".format(channel)].min()) / (df["{}_norm".format(channel)].max() - df["{}_norm".format(channel)].min())
+
+    return df
+
+def left_table_merge(df1, df2, on=None):
+    df = pd.merge(df1, df2, on=on, suffixes=('_left', '_right'))
+    columns_to_keep = [col for col in df.columns if not col.endswith('_right')]
+    df = df[columns_to_keep]
+
+    rename_dict = {col: col.replace('_left', '') for col in df.columns if col.endswith('_left')}
+
+    # Apply the renaming
+    df = df.rename(columns=rename_dict)
+    return df
+
+def cal_viability(df,pos_cols=[],neg_cols=[]):
+    #TODO: speed up with dask?
+    def viability_helper(row):
+        exp_pos = 0
+        exp_neg = 0
+
+        for pos in pos_cols:
+            exp_pos += np.exp(-10*(row[pos]-0.5))
+
+        for neg in neg_cols:
+            exp_neg += np.exp(-10*(0.5-row[neg]))
+
+        via = 1/(1+(exp_pos+exp_neg)/(len(pos_cols)+len(neg_cols)))
+
+        return via
+
+    df["viability"] = df.apply(viability_helper, axis=1)
+    return df
