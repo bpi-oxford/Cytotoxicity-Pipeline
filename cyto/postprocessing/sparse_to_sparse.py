@@ -5,7 +5,6 @@ import os
 import operator
 import numpy as np
 
-
 class CrossTableOperation(object):
     def __init__(self, column, operation, verbose=True):
         """
@@ -67,15 +66,46 @@ class FeatureFilter(object):
 
         return {"feature": feature_out}
 
-def intensity_norm(df,channel="mean",percentile=1):
+def intensity_norm(df,channel="mean", suffix="norm",lower=0,upper=1):
+    """
+    Calculate the normalized cell signal by user given lower and upper bounds and add it as a new column in the dataframe.
+
+    Parameters:
+    - df: pandas DataFrame, containing the fluorescence intensity data.
+    - channel: str, column name for normalization to take place. (default=mean)
+    - suffix: str, suffix appending to the normalized channel output in format of {channel}_{suffix} (default=norm).
+    - lower: float, lower bound value for min clipping range (default: 0)
+    - upper: float, upper bound value for max clipping range (default: 1)
+    
+    Returns:
+    - df: pandas DataFrame, with a new column '{channel}_{suffix}' containing the normalized signal.
+    """
+    df["{}_{}".format(channel, suffix)] = df[channel].clip(lower=lower, upper=upper)
+
+    df["{}_{}".format(channel, suffix)] = (df["{}_{}".format(channel, suffix)] - df["{}_{}".format(channel, suffix)].min()) / (df["{}_norm".format(channel)].max() - df["{}_norm".format(channel)].min())
+
+    return df
+
+def intensity_norm_percentile(df,channel="mean", suffix="norm",percentile=1):
+    """
+    Calculate the normalized cell signal by percentile clippings and add it as a new column in the dataframe.
+
+    Parameters:
+    - df: pandas DataFrame, containing the fluorescence intensity data.
+    - channel: str, column name for normalization to take place. (default=mean)
+    - suffix: str, suffix appending to the normalized channel output in format of {channel}_{suffix} (default=norm).
+    - percentile: float, percentile value for min/max range (default: 1)
+
+    Returns:
+    - df: pandas DataFrame, with a new column '{channel}_{suffix}' containing the normalized signal.
+    - lp: float, the lower percentile value.
+    - up: float, the upper percentile value.
+    """
     lp = df[channel].quantile(percentile/100.)
     up = df[channel].quantile(1-percentile/100.)
 
-    df["{}_norm".format(channel)] = df[channel].clip(lower=lp, upper=up)
-
-    df["{}_norm".format(channel)] = (df["{}_norm".format(channel)] - df["{}_norm".format(channel)].min()) / (df["{}_norm".format(channel)].max() - df["{}_norm".format(channel)].min())
-
-    return df
+    df = intensity_norm(df, channel=channel, suffix=suffix, lower=lp, upper=up)
+    return df, lp, up
 
 def left_table_merge(df1, df2, on=None):
     df = pd.merge(df1, df2, on=on, suffixes=('_left', '_right'))
@@ -105,4 +135,23 @@ def cal_viability(df,pos_cols=[],neg_cols=[]):
         return via
 
     df["viability"] = df.apply(viability_helper, axis=1)
+    return df
+
+def calculate_cdi(df, viability_col, death_col, out_col="CDI"):
+    """
+    Calculate the Cell Death Index (CDI) and add it as a new column in the dataframe.
+
+    Parameters:
+    - df: pandas DataFrame containing the fluorescence intensity data.
+    - viability_col: str, column name for the viability channel (e.g., live cell marker).
+    - death_col: str, column name for the death channel (e.g., dead cell marker).
+    - out_col: str, column name for CDI calculation output (default: CDI)
+
+    Returns:
+    - df: pandas DataFrame with a new column 'CDI' containing the calculated CDI values.
+    """
+    # Avoid division by zero by adding a small value to the denominator
+    epsilon = 1e-10
+    df[out_col] = df[death_col] / (df[viability_col] + df[death_col] + epsilon)
+    
     return df
