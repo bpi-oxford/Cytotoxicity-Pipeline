@@ -1,3 +1,5 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from typing import Any
 import pandas as pd
 from tqdm import tqdm
@@ -157,7 +159,7 @@ def compute_smoothed_gradient(df, track_id_col='track_id', frame_col='frame', va
     - value_col: str, name of the column representing scalar values.
     - sigma: float, the standard deviation for Gaussian smoothing (controls the smoothness).
     - ma_window: int, moving average window size
-    - smooth_method: str, smooth method between Gaussian smoothing, Levenberg Marquardt method and moving average, allowed options: "gaussian", "lm", "ma"
+    - smooth_method: str, smooth method between Gaussian smoothing, Levenberg Marquardt method and moving average filter, allowed options: "gaussian", "lm", "ma"
     - grad_method: str, numerical gradient difference method, allow options: "forward", "central"
     
     Returns:
@@ -212,7 +214,5 @@ def compute_smoothed_gradient(df, track_id_col='track_id', frame_col='frame', va
     # Step 5: Merge the interpolated data back to the original dataframe based on track_id and frame
     result = pd.merge(df, df_interpolated[[track_id_col, frame_col, "{}_smoothed".format(value_col), '{}_grad'.format(value_col)]],
                       on=[track_id_col, frame_col], how='left')
-    # result = pd.merge(df, df_interpolated[[track_id_col, frame_col, "{}_smoothed".format(value_col)]],
-    #                   on=[track_id_col, frame_col], how='left')
 
     return result
