@@ -7,6 +7,7 @@ import os
 import operator
 import numpy as np
 from scipy.optimize import curve_fit
+import dask.dataframe as dd
 
 class CrossTableOperation(object):
     def __init__(self, column, operation, verbose=True):
@@ -144,6 +145,8 @@ def calculate_cdi(df, viability_col, death_col, out_col="CDI"):
     """
     Calculate the Cell Death Index (CDI) and add it as a new column in the dataframe.
 
+    $$\text{Cell Death Index} = \frac{I_{\text{death,norm}}}{I_{\text{death,norm}}+I_{\text{live,norm}}}$$
+
     Parameters:
     - df: pandas DataFrame containing the fluorescence intensity data.
     - viability_col: str, column name for the viability channel (e.g., live cell marker).
@@ -262,6 +265,107 @@ def compute_smoothed_gradient(df, track_id_col='track_id', frame_col='frame', va
 
     # Step 5: Merge the interpolated data back to the original dataframe based on track_id and frame
     result = pd.merge(df, df_interpolated[[track_id_col, frame_col, "{}_smoothed".format(value_col), '{}_grad'.format(value_col)]],
+                      on=[track_id_col, frame_col], how='left')
+
+    return result
+
+from scipy.signal import savgol_filter
+
+def compute_savgol_filter(df, track_id_col="track_id", frame_col="frame", value_col='scalar_value', window_length=10, polyorder=3):
+    """
+    Applies the Savitzky-Golay filter to smooth the signal and compute its derivative.
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        DataFrame containing the time and signal columns.
+    track_id_col: str
+        Column name of the cell track id in the DataFrame.
+    frame_col : str
+        Column name of the time data in the DataFrame.
+    value_col : str
+        Column name of the value data in the DataFrame.
+    window_length : int, optional
+        The length of the filter window (must be odd), default is 11.
+    polyorder : int, optional
+        The order of the polynomial used to fit the samples, default is 3.
+
+    Returns:
+    --------
+    df : pd.DataFrame
+        The input DataFrame with additional columns for the smoothed signal and its derivative.
+    """
+
+    if isinstance(df, pd.DataFrame):
+        # Estimate the size of the DataFrame in bytes
+        df_size = df.memory_usage(deep=True).sum()
+
+        # Define a target partition size (e.g., 1 GB)
+        target_partition_size = 0.1*1024 * 1024 * 1024  # 1GB
+
+        # Calculate the number of partitions
+        npartitions = max(1, int(df_size / target_partition_size))  # At least 1 partition
+
+        print("npartitions:", npartitions)
+
+        ddf = dd.from_pandas(df,npartitions)
+    else:
+        ddf = df
+
+    # Step 1: Sort the DataFrame by track_id and frame
+    ddf_sorted = ddf.sort_values(by=[track_id_col, frame_col])
+
+    # Step 2: Interpolate missing frames within each track_id
+    def interpolate(group):
+        # Remove duplicate indices before reindexing
+        group = group.drop_duplicates(subset=[frame_col])
+
+        res = group.set_index(frame_col).reindex(
+            range(group[frame_col].min(), group[frame_col].max() + 1)
+        )
+
+        res[value_col] = res[value_col].interpolate()
+
+        # Reset the index
+        res = res.reset_index()
+
+        return res
+    
+    df_interpolated = ddf_sorted.groupby(track_id_col).apply(interpolate).reset_index(drop=True)
+
+    # Step 3: Compute smoothed signal using Savitzky-Golay filter
+    def apply_savgol(group):
+        # Compute smoothed signal for the current group
+        if polyorder >= len(group[value_col]):
+            polyorder_ = len(group[value_col])-1
+        else:
+            polyorder_ = polyorder
+
+        if len(group[value_col]) < window_length:
+            group["{}_smoothed".format(value_col)] = savgol_filter(group[value_col], window_length=len(group[value_col]), polyorder=polyorder_)
+        else:
+            group["{}_smoothed".format(value_col)] = savgol_filter(group[value_col], window_length=window_length, polyorder=polyorder_)
+
+        # group["{}_smoothed".format(value_col)] = group[value_col]
+        
+        # Compute the first derivative
+        # group["{}_grad".format(value_col)] = savgol_filter(group[value_col], window_length=window_length, polyorder=polyorder, deriv=1, delta=1)
+        if len(group["{}_smoothed".format(value_col)]) >= 2:
+            group["{}_grad".format(value_col)] = np.gradient(group["{}_smoothed".format(value_col)])
+        else:
+            group["{}_grad".format(value_col)] = np.nan
+
+        return group 
+
+    df_interpolated = df_interpolated.groupby(track_id_col).apply(apply_savgol).reset_index(drop=True)
+    
+    # Step 5: Merge the interpolated data back to the original dataframe based on track_id and frame
+    # keep same column types
+    df[track_id_col] = df[track_id_col].astype(int)
+    df[frame_col] = df[frame_col].astype(int)
+    df_interpolated[track_id_col] = df_interpolated[track_id_col].astype(int)
+    df_interpolated[frame_col] = df_interpolated[frame_col].astype(int)
+    result = dd.merge(df, df_interpolated[[track_id_col, frame_col, "{}_smoothed".format(value_col), '{}_grad'.format(value_col)]],
                       on=[track_id_col, frame_col], how='left')
 
     return result
