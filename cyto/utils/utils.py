@@ -1,5 +1,6 @@
 from typing import Any
 import numpy as np
+import pyopencl as cl
 
 class ImageToLabel(object):
     def __init__(self, verbose=True) -> None:
@@ -49,3 +50,23 @@ class ChannelMerge(object):
             weighted_combine += weighted.astype(images[0].dtype)
 
         return {"output": weighted_combine}
+
+def check_gpu_memory():
+    # Get list of platforms (e.g., NVIDIA, AMD, Intel)
+    platforms = cl.get_platforms()
+
+    for platform in platforms:
+        print(f"Platform: {platform.name}")
+        # Get list of devices (e.g., GPUs, CPUs) for the current platform
+        devices = platform.get_devices()
+
+        for device in devices:
+            if device.type == cl.device_type.GPU:
+                # Print device name and other details
+                print(f"Device: {device.name}")
+                print(f"Global Memory Size: {device.global_mem_size / (1024 ** 2)} MB")
+                print(f"Max Allocable Memory: {device.max_mem_alloc_size / (1024 ** 2)} MB")
+                print(f"Local Memory Size: {device.local_mem_size / 1024} KB")
+                print(f"Available: Yes")
+            else:
+                print(f"Device: {device.name} (Not a GPU)")
