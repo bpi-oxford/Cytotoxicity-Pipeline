@@ -112,14 +112,34 @@ def intensity_norm_percentile(df,channel="mean", suffix="norm",percentile=1):
     return df, lp, up
 
 def left_table_merge(df1, df2, on=None):
-    df = pd.merge(df1, df2, on=on, suffixes=('_left', '_right'))
+    """
+    Perform a left merge between two DataFrames (pandas or Dask),
+    keeping only unique columns and renaming overlapping columns.
+    
+    Parameters:
+        df1: pandas.DataFrame or dask.dataframe.DataFrame
+            The left DataFrame.
+        df2: pandas.DataFrame or dask.dataframe.DataFrame
+            The right DataFrame.
+        on: list or str
+            The column(s) to merge on.
+            
+    Returns:
+        A DataFrame (pandas or Dask) resulting from the left merge.
+    """
+
+    # Perform the merge
+    df = df1.merge(df2, on=on, suffixes=('_left', '_right'), how='left')
+    
+    # Keep only the columns from df1 and any non-conflicting columns from df2
     columns_to_keep = [col for col in df.columns if not col.endswith('_right')]
-    df = df[columns_to_keep]
-
-    rename_dict = {col: col.replace('_left', '') for col in df.columns if col.endswith('_left')}
-
-    # Apply the renaming
-    df = df.rename(columns=rename_dict)
+    
+    # Handle column renaming for overlapping columns
+    rename_dict = {col: col.replace('_left', '') for col in columns_to_keep if col.endswith('_left')}
+    
+    # Select and rename the columns
+    df = df[columns_to_keep].rename(columns=rename_dict)
+    
     return df
 
 def cal_viability(df,pos_cols=[],neg_cols=[]):

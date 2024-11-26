@@ -1,0 +1,120 @@
+description: Cytotoxicity batch run pipeline file
+microscope: Confocal_2D+t
+fiji_dir: /home/vpfannenstill/Fiji.app
+channels: 
+  # path to the tiff files
+  #TCell: /media/Data3/Jacky/Data/UTSE_cyto/PI_CellTracker/ch1.tif
+  # Brightfield: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C2_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_BF.tif
+  #Dead: /media/Data3/Jacky/Data/UTSE_cyto/PI_CellTracker/ch0.tif
+  # Alive: /mnt/Imaging/Group Fritzsche/Jacky/tcell/1To2CancerToTcell_ratio/C4_Nyeso1HCT116_1G4PrimaryPure_Icam_CxCl12_GFP_488nm_cancercells.tif
+
+  # TCell: /home/jackyko/Projects/Cytotoxicity-Pipeline/output/segmentation/StarDist/TCell.tif
+  Dead: /mnt/Data/UTSE/2023_12_08_WT_HCT116_CTG500nM_framerate10sec_flow0p1mlperh_analysis/register_denoising_gamma/ch1/*.tif
+  Alive: /mnt/Data/UTSE/2023_12_08_WT_HCT116_CTG500nM_framerate10sec_flow0p1mlperh_analysis/register_denoising_gamma/ch0/*.tif
+  CancerCell: /mnt/Data/UTSE/2023_12_08_WT_HCT116_CTG500nM_framerate10sec_flow0p1mlperh_analysis/register_denoising_gamma_channel_merged_masks/*.tif
+image_range:
+  # [start,stop,step], null/-1 refers to max range
+  x: [0,null,1]
+  y: [0,null,1]
+  t: [0,100,1]
+output_dir: /home/vpfannenstill/Projects/Cytotoxicity-Pipeline/output
+spacing: [1.6,1.6] # um
+
+pipeline:
+  preprocessing:
+    # - name: ChannelMerge # multiple channel input and new output channel
+    #   channels: [[Dead, Alive]]
+    #   args:
+    #     verbose: True
+    #   output_channel_name: CancerCell
+    #   output: True
+    # - name: PercentileNormalization
+    #   channels: all #effective channels, can be a list of channel names matching path input
+    #   args:
+    #     lp: 5
+    #     up: 95
+    #     verbose: True
+    #   output: True
+    # - name: GammaCorrection
+    #   channels: [TCell]
+    #   args:
+    #     verbose: True
+    #     gamma: 0.5
+    #     gain: 1
+    #   output: True
+
+  segmentation:
+  #   - name: StarDist
+  #     channels: [TCell,CancerCell]
+  #     input_type: "image" # allows image/label input type
+  #     args: 
+  #       model_name: "2D_versatile_fluo" # List of pretrained models: https://github.com/stardist/stardist/tree/master#pretrained-models-for-2d
+  #       prob_thresh: 0.3
+  #       nms_thresh: 0.8
+  #     output_type: "label" # only allow label type for segmentation process
+  #     output: True
+    - name: ImageToLabel
+      channels: all
+      input_type: "image"
+      args: null
+      output_type: "label" # only allow label type for segmentation process
+      output: True
+  label_to_sparse:
+    image_label_pair: [
+        [CancerCell,CancerCell],
+        [Dead,CancerCell],
+        [Alive,CancerCell]
+      ]
+    output: True
+  # # tracking:
+  # #   - name: TrackMate
+  # #     channels: [TCell, Dead, Alive]
+  # #     # channels: [Alive]
+  # #     args:
+  # #       verbose: True
+  # #     output: True
+  # postprocessing:
+  #   - name: CrossTableOperation
+  #     channels: [[Alive,Dead]]
+  #     input_type: ["feature"]
+  #     output_type: ["feature"]
+  #     args:
+  #       column: mean
+  #       operation: divide
+  #     output_channel_name: [CancerCell]
+  #     output: True
+  #   - name: CrossTableOperation
+  #     channels: [[CancerCell,Dead]]
+  #     input_type: ["feature"]
+  #     output_type: ["feature"]
+  #     args:
+  #       column: median
+  #       operation: divide
+  #     output_channel_name: [CancerCell]
+  #     output: True
+  #   - name: KernelDensityEstimation
+  #     channels: [CancerCell,TCell]
+  #     input_type: ["image","feature"]
+  #     output_type: ["image"]
+  #     args: 
+  #       base_image: False
+  #       downscale_factor: 4
+  #       gradient: False
+  #     output_channel_name: [CancerCellKDE, TCellKDE]
+  #     output: True
+  #   - name: CellTriangulation
+  #     channels: [CancerCell,TCell]
+  #     input_type: ["image","feature"]
+  #     output_type: ["image", "network"]
+  #     args: 
+  #       base_image: False
+  #     output_channel_name: [CancerCellNetwork, TCellNetwork]
+  #     output: True
+  #   - name: CrossCellContactMeasures
+  #     channels: [[TCell,CancerCell],[CancerCell,TCell]]
+  #     input_type: ["image","label","feature"]
+  #     output_type: ["image", "feature", "network"]
+  #     args:
+  #       base_image: False
+  #     output_channel_name: [TCellToCancerCell,CancerCellToTCell]
+  #     output: True
