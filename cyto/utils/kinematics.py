@@ -17,11 +17,17 @@ def cal_kinematics(tracks, x_col="x", y_col="y", frame_col="frame", track_id_col
         dt=sorted_grouped.groupby(track_id_col)[frame_col].shift(-1)-sorted_grouped[frame_col]
         )
     
+    # tracks_ddf["dx_from_previous_point"] = tracks_ddf["dx_from_previous_point"].astype(float)
+    # tracks_ddf["dy_from_previous_point"] = tracks_ddf["dy_from_previous_point"].astype(float)
+    # tracks_ddf["dt"] = tracks_ddf["dt"].astype(float)
+    
     tracks_ddf = tracks_ddf.rename(columns={
         "dx_from_previous_point": "dx from previous point", 
         "dy_from_previous_point": "dy from previous point",
         "dt": "dt"
         }).fillna(0)
+
+    print("a")
 
     # cumulative time
     tracks_ddf["dt acc"] = tracks_ddf.groupby([track_id_col])[frame_col].transform("min").reset_index(drop=True)
@@ -38,6 +44,8 @@ def cal_kinematics(tracks, x_col="x", y_col="y", frame_col="frame", track_id_col
     tracks_ddf["dy acc"] = tracks_ddf.groupby([track_id_col])['dy acc'].cumsum().fillna(0)
     tracks_ddf["distance traveled"] = tracks_ddf.groupby([track_id_col])['displacement from previous point'].cumsum().fillna(0)
     tracks_ddf["path efficiency"] = (tracks_ddf["distance traveled"]/tracks_ddf["displacement from origin"]).fillna(0).replace([np.inf, -np.inf], 0)
+
+    print("b")
 
     # velocity
     tracks_ddf["vel_x"] = (tracks_ddf["dx from previous point"]/tracks_ddf["dt"]).fillna(0).replace([np.inf, -np.inf], 0)

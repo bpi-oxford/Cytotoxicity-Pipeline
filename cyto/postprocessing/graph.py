@@ -16,6 +16,7 @@ from pathos.threading import ThreadPool
 import time
 import pickle
 from datetime import datetime
+from ..utils.utils import *
 
 class CellTriangulation(object):
     def __init__(self, base_image=True, verbose=True) -> None:
@@ -159,7 +160,12 @@ class CrossCellContactMeasures(object):
 
         # generate distance matrix on gpu
         start_time = time.time()
+
+        if self.verbose:
+            print("Generating distance matrix: {}".format(frame))
         distance_matrix_device = cle.generate_distance_matrix(centroids_0, centroids_1)
+        if self.verbose:
+            check_gpu_memory()
 
         if self.verbose:
             end_time = time.time()
@@ -205,9 +211,17 @@ class CrossCellContactMeasures(object):
             tqdm.write("@frame {}: labelShapeStat elapsed time for thread count = {}: {:.4f}s".format(frame,str(self.threads),elapsed_time))
 
         start_time = time.time()
+        if self.verbose:
+            print("Generating binary overlap matrix: {}".format(frame))
         overlap_matrix_device = cle.generate_binary_overlap_matrix(label_0, label_1)
+        if self.verbose:
+            check_gpu_memory()
 
+        if self.verbose:
+            print("Generating masked distance matrix: {}".format(frame))
         masked_distance_matrix = cle.multiply_images(overlap_matrix_device,distance_matrix_device)
+        if self.verbose:
+            check_gpu_memory()
 
         pointlist = np.concatenate([centroids_0,centroids_1],axis=1)
         distance_matrix_pivot = np.zeros((c_count[0]+c_count[1]+1,c_count[0]+c_count[1]+1))
@@ -239,6 +253,8 @@ class CrossCellContactMeasures(object):
 
         start_time = time.time()
         # pulling data from device to host
+        if self.verbose:
+            print("Cleaning up GPU: {}".format(frame))
         distance_matrix_host = cle.pull(distance_matrix_device)
         overlap_matrix_host = cle.pull(overlap_matrix_device)
         distance_mesh_host = cle.pull(distance_mesh_device)
@@ -250,6 +266,8 @@ class CrossCellContactMeasures(object):
         del distance_matrix_device
         del overlap_matrix_device
         del distance_mesh_device
+        if self.verbose:
+            check_gpu_memory()
 
         if self.verbose:
             end_time = time.time()
@@ -413,7 +431,11 @@ class CrossCellContactMeasures(object):
                         c_count.append(centroids.shape[1])
 
                     # generate distance matrix
+                    if self.verbose:
+                        print("Generating distance matrix: {}".format(CUR_FRAME))
                     distance_matrix_device = cle.generate_distance_matrix(c[0], c[1])
+                    if self.verbose:
+                        check_gpu_memory()
 
                     relabelFilter = sitk.RelabelComponentImageFilter()
                     labels0_ = relabelFilter.Execute(sitk.GetImageFromArray(labels[0][:,:,CUR_FRAME]))
@@ -428,9 +450,17 @@ class CrossCellContactMeasures(object):
                     statFilter = sitk.LabelShapeStatisticsImageFilter()
                     statFilter.Execute(labels1_)
 
+                    if self.verbose:
+                        print("Generating binary overlap matrix: {}".format(CUR_FRAME))
                     overlap_matrix_device = cle.generate_binary_overlap_matrix(labels[0][:,:,CUR_FRAME], labels[1][:,:,CUR_FRAME])
+                    if self.verbose:
+                        check_gpu_memory()
 
+                    if self.verbose:
+                        print("Masking overlap: {}".format(CUR_FRAME))
                     masked_distance_matrix = cle.multiply_images(overlap_matrix_device,distance_matrix_device)
+                    if self.verbose:
+                        check_gpu_memory()
 
                     pointlist = np.concatenate(c,axis=1)
                     distance_matrix_pivot = np.zeros((c_count[0]+c_count[1]+1,c_count[0]+c_count[1]+1))
@@ -446,6 +476,8 @@ class CrossCellContactMeasures(object):
                     graph.append(networkx_graph_two_cell_types_overlap)
 
                     # pulling data from device to host
+                    if self.verbose:
+                        print("Cleaning GPU memory: {}".format(CUR_FRAME))
                     distance_matrix_host = cle.pull(distance_matrix_device)
                     overlap_matrix_host = cle.pull(overlap_matrix_device)
                     distance_mesh_host = cle.pull(distance_mesh_device)
@@ -457,6 +489,8 @@ class CrossCellContactMeasures(object):
                     del distance_matrix_device
                     del overlap_matrix_device
                     del distance_mesh_device
+                    if self.verbose:
+                        check_gpu_memory()
 
                     if network_image is None:
                         network_image = np.expand_dims(distance_mesh_host, axis=-1)

@@ -3,6 +3,7 @@ import sys
 import argparse
 import yaml
 from aicsimageio import AICSImage
+import dask_image.imread
 from aicsimageio.writers import OmeTiffWriter
 from init import *
 from cyto.preprocessing.normalization import *
@@ -275,14 +276,16 @@ def main():
 	images = {}
 	for ch, path in pipeline["channels"].items():
 		# Get an AICSImage object
-		img = AICSImage(path)  # selects the first scene found
+		#img = AICSImage(path)  # selects the first scene found
+		img = dask_image.imread.imread(path)
 
 		# Pull only a specific chunk in-memory
 		slice_x = slice(pipeline["image_range"]["x"][0],pipeline["image_range"]["x"][1],pipeline["image_range"]["x"][2])
 		slice_y = slice(pipeline["image_range"]["y"][0],pipeline["image_range"]["y"][1],pipeline["image_range"]["y"][2])
 		slice_t = slice(pipeline["image_range"]["t"][0],pipeline["image_range"]["t"][1],pipeline["image_range"]["t"][2])
-		img_dask = img.get_image_dask_data("XYT")[slice_x,slice_y,slice_t]
-		images[ch] = img_dask.persist()
+		#img_dask = img.get_image_dask_data("XYT")[slice_x,slice_y,slice_t]
+		img_dask = img[slice_x, slice_y, slice_t]
+		images[ch] = img_dask.compute()
 
 	# create output dir
 	os.makedirs(pipeline["output_dir"],exist_ok=True)
