@@ -14,3 +14,5 @@
 12. [Delayed Viability](./example_12.ipynb)
 13. [Single Contact Killing Analysis](./example_13.ipynb)
 14. [Killing Capacity](./example_14.ipynb)
+15. [Organisation Entropy](./example_15.ipynb)
+16. [Tracklet Association](./example_16.ipynb)
