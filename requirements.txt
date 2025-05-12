@@ -13,3 +13,5 @@ opencv-python
 cellpose
 pathos
 mpi4py
+Sphinx
+sphinx_rtd_theme

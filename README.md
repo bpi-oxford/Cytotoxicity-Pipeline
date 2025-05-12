@@ -1,9 +1,33 @@
 # Python Cytotoxicity Pipeline (pyCyto)
-A pipelined workflow package for microscopic cytotoxicity analysis, intentionally designed for high extension flexibility and experiment repeatability.
 
-Users may provide a YAML script for a quick configuration of the analysis pipeline. 
+**pyCyto** is a flexible and extensible Python-based workflow package designed for analyzing microscopic cytotoxicity assays. It enables researchers and bioimage analysts to build reproducible analysis pipelines using simple YAML configuration files. Key features include support for multi-channel images, integration with Dask for parallel processing, and a modular design covering preprocessing, segmentation, tracking, and postprocessing analysis.
 
-## Processing pipeline
+## Processing Pipeline Overview
+
+The following diagram illustrates the typical workflow stages within pyCyto:
+
+```mermaid
+graph TD
+    A[Start: Raw Microscopic Images] --> B(File IO);
+    B --> C{Preprocessing};
+    C --> D[Intensity Normalization];
+    C --> E[Channel Merge];
+    C --> F[Denoising, Field Correction, etc. #40;Optional#41;];
+    D & E & F --> G{Segmentation};
+    G --> H[StarDist];
+    G --> I[Cellpose];
+    H & I --> J{Tracking};
+    J --> K[TrackMate];
+    J --> L[trackpy #40;Future#41;];
+    K & L --> M{Postprocessing/Analysis};
+    M --> N[Contact Tracing];
+    M --> O[Kinematics];
+    N & O --> P[Output: Results Table/Plots];
+
+    style P fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+## Detailed Pipeline Steps & Features
 - File IO
   - [x] Multi-channel image handling pipeline
   - [x] Dask implementation 
@@ -12,7 +36,7 @@ Users may provide a YAML script for a quick configuration of the analysis pipeli
 
 - Preprocessing
   - [ ] Decovolution
-  - [ ] Flat field correction
+  - [ ] Flat field correction 
   - [ ] Denoising
   - [ ] Gamma correction
   - [x] Intensity normalization
@@ -52,6 +76,18 @@ The result Pandas table should take the following format:
 |  1 |   2   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 |  2 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
 |  3 |   1   |   |   |   |   |       |       |       |       |              |              |                 |                    |
+
+## Documentation
+
+Comprehensive documentation, including tutorials, API references, and detailed explanations, is available on the [documentation site](https://bpi-oxford.github.io/Cytotoxicity-Pipeline/). The source files for the documentation, built with Sphinx, reside in the [`./doc`](./doc) directory.
+
+## Example Data
+
+Example datasets for testing the pipeline can be found in the [`./data`] directory. Due to large file size, data is managed by Git LFS. See the documentation for details on acquiring and using the example data.
+
+## Test Cases
+
+End-to-end test cases demonstrating pipeline usage with example data are located in the [`./tests`](./tests) directory. These can be used to verify installation and understand different configuration options.
 
 ## Environment Setup
 ### Native Python Runtime
