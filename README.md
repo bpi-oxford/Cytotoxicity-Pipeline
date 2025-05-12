@@ -26,7 +26,7 @@ graph TD
     Q --> O[Kinematics];
     N & O --> P[Output: Results Table/Plots];
 
-    style P fill:#f9f,stroke:#333,stroke-width:2px
+    style P fill:#142bfc,stroke:#333,stroke-width:2px
 ```
 
 ## Detailed Pipeline Steps & Features
