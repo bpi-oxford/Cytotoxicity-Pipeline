@@ -3,7 +3,7 @@
 **pyCyto** is a flexible and extensible Python-based workflow package designed for analyzing microscopic cytotoxicity assays. It enables researchers and bioimage analysts to build reproducible analysis pipelines using simple YAML configuration files. Key features include support for multi-channel images, integration with Dask for parallel processing, and a modular design covering preprocessing, segmentation, tracking, and postprocessing analysis.
 
 ## Processing Pipeline
-The dynamic cytotoxicity analysis pipeline can be found in [./doc/source/pipeline.md](./doc/source/pipeline.md).
+The dynamic cytotoxicity analysis pipeline can be found in [./doc/pipeline.md](./doc/pipeline.md).
 
 ## Detailed Pipeline Steps & Features
 - File IO
@@ -68,7 +68,7 @@ End-to-end test cases demonstrating pipeline usage with example data are located
 
 ## Environment Setup
 ### Native Python Runtime
-Check [./doc/source/setup.md](./doc/source/setup.md) for the setup instruction.
+Check [./doc/setup.md](./doc/setup.md) for the setup instruction.
 
 ### Docker Runtime
 For quick environment setup use the docker image:
@@ -107,7 +107,7 @@ During runtime a Dask daskboard is created. Usually you can access with the addr
 Check the pipeline YAML example in [./pipelines/pipeline.yaml](./pipelines/pipeline.yaml)
 
 ## Development Guide
-For developers please follow the guide in [./doc/source/dev_guide.md](./doc/source/dev_guide.md).
+For developers please follow the guide in [./doc/dev_guide.md](./doc/dev_guide.md).
 
 ## TODO
 - GUI pipeline configuration

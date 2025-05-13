@@ -15,3 +15,5 @@ pathos
 mpi4py
 Sphinx
 sphinx_rtd_theme
+myst-parser
+sphinxcontrib-mermaid

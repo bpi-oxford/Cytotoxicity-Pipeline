@@ -38,6 +38,8 @@ extensions = [
     'sphinx.ext.napoleon',   # Support for NumPy and Google style docstrings
     'sphinx.ext.viewcode',   # Add links to highlighted source code
     'sphinx_rtd_theme',    # Read the Docs theme
+    'myst_parser', # For markdown
+    'sphinxcontrib.mermaid', # For Mermaid diagrams
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -70,3 +72,7 @@ html_static_path = ['_static']
 
 
 # -- Extension configuration -------------------------------------------------
+
+myst_enable_extensions = [
+    "eval_rst",
+]
