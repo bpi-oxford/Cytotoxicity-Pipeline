@@ -2,32 +2,8 @@
 
 **pyCyto** is a flexible and extensible Python-based workflow package designed for analyzing microscopic cytotoxicity assays. It enables researchers and bioimage analysts to build reproducible analysis pipelines using simple YAML configuration files. Key features include support for multi-channel images, integration with Dask for parallel processing, and a modular design covering preprocessing, segmentation, tracking, and postprocessing analysis.
 
-## Processing Pipeline Overview
-
-The following diagram illustrates the typical workflow stages within pyCyto:
-
-```mermaid
-graph TD
-    A[Start: Raw Microscopic Images] --> AA[Spatial Tiling #40;Optional#41;]
-    AA --> B(File IO);
-    B --> C{Preprocessing #40;Image→Image#41;};
-    C --> D[Intensity Normalization];
-    C --> E[Channel Merge];
-    C --> F[Denoising, Field Correction, etc. #40;Optional#41;];
-    D & E & F --> G{Segmentation #40;Image→Label#41;};
-    G --> H[StarDist];
-    G --> I[Cellpose];
-    H & I --> J{Tracking #40;Label→Table#41;};
-    J --> K[TrackMate #40;Sparse Input#41;];
-    J --> L[trackpy #40;Sparse Input#41;];
-    J --> M[Ultrack #40;Dense Input#41;];
-    K & L & M --> Q{Postprocessing/Analysis #40;Label/Table→Table/Network Graph/Plots#41;};
-    Q --> N[Contact Tracing];
-    Q --> O[Kinematics];
-    N & O --> P[Output: Results Table/Plots];
-
-    style P fill:#142bfc,stroke:#333,stroke-width:2px
-```
+## Processing Pipeline
+The dynamic cytotoxicity analysis pipeline can be found in [./doc/pipeline.md](./doc/pipeline.md).
 
 ## Detailed Pipeline Steps & Features
 - File IO
@@ -84,7 +60,7 @@ Comprehensive documentation, including tutorials, API references, and detailed e
 
 ## Example Data
 
-Example datasets for testing the pipeline can be found in the [`./data`] directory. Due to large file size, data is managed by Git LFS. See the documentation for details on acquiring and using the example data.
+Example datasets for testing the pipeline can be found in the [`./data`](./data) directory. Due to large file size, data is managed by Git LFS. See the documentation for details on acquiring and using the example data.
 
 ## Test Cases
 

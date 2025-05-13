@@ -1,9 +1,9 @@
-name: Deploy Documentation to GitHub Pages
+name: Deploy Sphinx Documentation to GitHub Pages
 
 on:
   push:
     branches:
-      - main  # Or your default branch name
+      - main
 
 jobs:
   build-and-deploy:
@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # Choose an appropriate Python version
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
