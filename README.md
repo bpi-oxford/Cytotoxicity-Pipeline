@@ -56,7 +56,7 @@ The result Pandas table should take the following format:
 
 ## Documentation
 
-Comprehensive documentation, including tutorials, API references, and detailed explanations, is available on the [documentation site](https://bpi-oxford.github.io/Cytotoxicity-Pipeline/). The source files for the documentation, built with Sphinx, reside in the [`./doc`](./doc) directory.
+Comprehensive documentation, including tutorials, API references, and detailed explanations, is available on the [documentation site](https://bpi-oxford.github.io/Cytotoxicity-Pipeline/index.html). The source files for the documentation, built with Sphinx, reside in the [`./doc`](./doc) directory.
 
 ## Example Data
 
