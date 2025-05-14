@@ -167,3 +167,5 @@ output
 ?
 dask-scratch-space
 data
+
+doc/_build
