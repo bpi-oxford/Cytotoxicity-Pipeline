@@ -34,6 +34,7 @@ pyCyto provides robust tools for analyzing key cellular behaviors in time-lapse 
   <img src="./doc/assets/signal-2024-08-19-173440_002.gif" alt="Large FOV lightsheet cytotoxicity assay" width="200"/>
   <img src="./doc/assets/signal-2024-08-19-173440_004.gif" alt="Zoomed region for contact analysis on large FOV data. Green:  eGFP NY-ESO-1 cell; Magenta: Engineered T cells." width="200"/>
 </p>
+
 - **Confocal Cytotoxicity Assay**: eGFP-tagged NY-ESO-1 tumor cells (green) are targeted by engineered T cells (red). Cell death is indicated by the PI death marker (blue).
 
 - **Cell Cluster Networks**: Network visualization of dynamic cell clustering behavior over time during immune cell-tumor interactions.
