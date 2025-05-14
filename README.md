@@ -9,12 +9,6 @@
 ---
 
 ## 🔬 Cytotoxicity Assays and Cine Microscopy Analysis
-<p align="center">
-  <img src="./doc/assets/f66a8551-7046-4fe5-b1cd-6ac1da108e0e.gif" alt="Confocal cytotoxicity assay. Green: eGFP NY-ESO-1 cell; Red: Engineered T cells; Blue: PI Death marker." width="200"/>
-  <img src="./doc/assets/98d4baf6-5791-4dd2-aa1a-9b84cba44788.gif" alt="Cell cluster networks" width="200"/>
-  <img src="./doc/assets/signal-2024-08-19-173440_002.gif" alt="Large FOV lightsheet cytotoxicity assay" width="200"/>
-  <img src="./doc/assets/signal-2024-08-19-173440_004.gif" alt="Zoomed region for contact analysis on large FOV data. Green:  eGFP NY-ESO-1 cell; Magenta: Engineered T cells." width="200"/>
-</p>
 
 
 pyCyto provides robust tools for analyzing key cellular behaviors in time-lapse microscopy. The core analysis features include:
@@ -32,6 +26,21 @@ pyCyto provides robust tools for analyzing key cellular behaviors in time-lapse 
   - **Kinematics Measurement**: Analysis of cell movement, including velocity and displacement vectors.
 
   - **Cell Contacting Count**: Enumeration and logging of contact events between cells throughout the time course.
+
+### Sample Application (left to right)
+<p align="center">
+  <img src="./doc/assets/f66a8551-7046-4fe5-b1cd-6ac1da108e0e.gif" alt="Confocal cytotoxicity assay. Green: eGFP NY-ESO-1 cell; Red: Engineered T cells; Blue: PI Death marker." width="200"/>
+  <img src="./doc/assets/98d4baf6-5791-4dd2-aa1a-9b84cba44788.gif" alt="Cell cluster networks" width="200"/>
+  <img src="./doc/assets/signal-2024-08-19-173440_002.gif" alt="Large FOV lightsheet cytotoxicity assay" width="200"/>
+  <img src="./doc/assets/signal-2024-08-19-173440_004.gif" alt="Zoomed region for contact analysis on large FOV data. Green:  eGFP NY-ESO-1 cell; Magenta: Engineered T cells." width="200"/>
+</p>
+- **Confocal Cytotoxicity Assay**: eGFP-tagged NY-ESO-1 tumor cells (green) are targeted by engineered T cells (red). Cell death is indicated by the PI death marker (blue).
+
+- **Cell Cluster Networks**: Network visualization of dynamic cell clustering behavior over time during immune cell-tumor interactions.
+
+- **Large Field-of-View Lightsheet Assay**: High-throughput imaging of cytotoxic events across a large imaging region.
+
+- **Zoomed Region for Contact Analysis**: Close-up of lightsheet data highlighting immune-tumor cell contacts. Green: eGFP NY-ESO-1 cancer cell; Magenta: target specific engineered T cells.
 
 ---
 
